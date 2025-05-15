@@ -33,3 +33,14 @@ export interface WhatsAppSession {
   connected: boolean;
   qrCode?: string;
 }
+
+export interface WhatsAppChat {
+  id: string;
+  remoteJid: string;
+  pushName: string;
+  profilePicUrl: string | null;
+  updatedAt: string;
+  windowStart: string;
+  windowExpires: string;
+  windowActive: boolean;
+}

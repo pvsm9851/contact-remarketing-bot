@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { WhatsAppSession } from "@/types";
+import { WhatsAppSession, WhatsAppChat } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -11,6 +11,9 @@ interface WhatsAppContextType {
   createSession: () => Promise<void>;
   checkStatus: () => Promise<void>;
   resetSession: () => void;
+  chats: WhatsAppChat[];
+  loadingChats: boolean;
+  fetchChats: () => Promise<void>;
 }
 
 const WhatsAppContext = createContext<WhatsAppContextType | undefined>(undefined);
@@ -28,6 +31,8 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [session, setSession] = useState<WhatsAppSession | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [chats, setChats] = useState<WhatsAppChat[]>([]);
+  const [loadingChats, setLoadingChats] = useState<boolean>(false);
   
   // N8N API configuration
   const N8N_API_URL = "https://api.mavicmkt.com.br";
@@ -55,15 +60,12 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Check the status of a session with the N8N API
   const checkSessionStatus = async (sessionId: string) => {
     try {
-      const response = await fetch(`${N8N_API_URL}/instance/status`, {
-        method: "POST",
+      const response = await fetch(`${N8N_API_URL}/instance/connectionState/${sessionId}`, {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
           "apikey": N8N_API_KEY
-        },
-        body: JSON.stringify({
-          instanceName: sessionId
-        })
+        }
       });
       
       if (!response.ok) {
@@ -73,8 +75,10 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const data = await response.json();
       console.log("Session status:", data);
       
-      if (data.status === "connected" || data.status === "CONNECTED") {
+      if (data.instance?.state === "open") {
         updateSessionStatus(sessionId, true);
+        // Also fetch chats if session is connected
+        fetchChatsForSession(sessionId);
       }
     } catch (e) {
       console.error("Failed to check session status", e);
@@ -150,6 +154,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         toast("Sessão criada", {
           description: "Escaneie o código QR para conectar seu WhatsApp."
         });
+
+        // Start polling for connection status
+        setTimeout(() => checkStatus(), 5000);
       } else {
         throw new Error("QR code not received from API");
       }
@@ -166,20 +173,62 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // Function to fetch chats from a connected WhatsApp session
+  const fetchChatsForSession = async (sessionId: string) => {
+    setLoadingChats(true);
+    
+    try {
+      const response = await fetch(`${N8N_API_URL}/chat/findChats/${sessionId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": N8N_API_KEY
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Chats data:", data);
+      
+      if (Array.isArray(data)) {
+        setChats(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch chats", e);
+      toast("Erro", {
+        description: "Falha ao carregar conversas do WhatsApp."
+      });
+    } finally {
+      setLoadingChats(false);
+    }
+  };
+
+  // Public function to fetch chats
+  const fetchChats = async () => {
+    if (!session?.session || !session.connected) {
+      toast("Erro", {
+        description: "WhatsApp não está conectado."
+      });
+      return;
+    }
+    
+    await fetchChatsForSession(session.session);
+  };
+
   const checkStatus = async () => {
     if (!session || !auth.user) return;
     
     try {
       // Call the N8N API to check the status of the WhatsApp instance
-      const response = await fetch(`${N8N_API_URL}/instance/status`, {
-        method: "POST",
+      const response = await fetch(`${N8N_API_URL}/instance/connectionState/${session.session}`, {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
           "apikey": N8N_API_KEY
-        },
-        body: JSON.stringify({
-          instanceName: session.session
-        })
+        }
       });
       
       if (!response.ok) {
@@ -189,8 +238,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const data = await response.json();
       console.log("Instance status:", data);
       
-      if (data.status === "connected" || data.status === "CONNECTED") {
+      if (data.instance?.state === "open") {
         updateSessionStatus(session.session, true);
+        fetchChatsForSession(session.session);
       } else {
         // If still not connected, check again in a few seconds
         setTimeout(() => checkStatus(), 5000);
@@ -220,6 +270,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       localStorage.removeItem(`whatsapp_session_${auth.user.id}`);
       setSession(null);
+      setChats([]);
       
       toast("Sessão resetada", {
         description: "A conexão com WhatsApp foi desfeita."
@@ -236,7 +287,10 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       error, 
       createSession, 
       checkStatus, 
-      resetSession 
+      resetSession,
+      chats,
+      loadingChats,
+      fetchChats 
     }}>
       {children}
     </WhatsAppContext.Provider>
