@@ -1,9 +1,24 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+// Contexts
+import { AuthProvider } from "@/contexts/AuthContext";
+import { WhatsAppProvider } from "@/contexts/WhatsAppContext";
+
+// Components
+import RequireAuth from "@/components/RequireAuth";
+import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
+
+// Pages
 import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import WhatsAppConnect from "./pages/WhatsAppConnect";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -14,11 +29,51 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <WhatsAppProvider>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              <Route 
+                path="/login" 
+                element={
+                  <RedirectIfAuthenticated>
+                    <Login />
+                  </RedirectIfAuthenticated>
+                } 
+              />
+              <Route 
+                path="/registro" 
+                element={
+                  <RedirectIfAuthenticated>
+                    <Register />
+                  </RedirectIfAuthenticated>
+                } 
+              />
+
+              {/* Protected Routes */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <RequireAuth>
+                    <Dashboard />
+                  </RequireAuth>
+                } 
+              />
+              <Route 
+                path="/whatsapp" 
+                element={
+                  <RequireAuth>
+                    <WhatsAppConnect />
+                  </RequireAuth>
+                } 
+              />
+
+              {/* Catch All */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </WhatsAppProvider>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
