@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { AuthState, User } from "@/types";
 
 interface AuthContextType {
@@ -71,7 +71,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!user) {
           toast("Erro ao fazer login", {
             description: "E-mail não encontrado.",
-            variant: "destructive",
           });
           return;
         }
@@ -96,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Login error:", error);
       toast("Erro ao fazer login", {
         description: "Houve um problema ao tentar fazer login.",
-        variant: "destructive",
       });
     }
   };
@@ -113,7 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (users.some((u: User) => u.email === email)) {
           toast("Erro ao registrar", {
             description: "Este e-mail já está em uso.",
-            variant: "destructive",
           });
           return;
         }
@@ -147,7 +144,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Registration error:", error);
       toast("Erro ao registrar", {
         description: "Houve um problema ao tentar criar sua conta.",
-        variant: "destructive",
       });
     }
   };

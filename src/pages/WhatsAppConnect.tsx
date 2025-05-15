@@ -8,21 +8,32 @@ import { useWhatsApp } from "@/contexts/WhatsAppContext";
 
 const WhatsAppConnect = () => {
   const { session, isLoading, error, createSession, checkStatus, resetSession } = useWhatsApp();
-  const [mockTimer, setMockTimer] = useState<number | null>(null);
+  const [pollingTimeout, setPollingTimeout] = useState<number | null>(null);
   
-  // If QR code is displayed, simulate a connection after 10 seconds
+  // Set up polling to check connection status if QR code is displayed
   useEffect(() => {
-    if (session?.qrCode && !session.connected && mockTimer === null) {
-      const timer = window.setTimeout(() => {
-        checkStatus();
-      }, 10000);
-      setMockTimer(timer);
+    if (session?.qrCode && !session.connected && pollingTimeout === null) {
+      // Start polling for status updates every 5 seconds
+      const timeout = window.setTimeout(async () => {
+        await checkStatus();
+      }, 5000);
+      
+      setPollingTimeout(Number(timeout));
+      
       return () => {
-        clearTimeout(timer);
-        setMockTimer(null);
+        clearTimeout(timeout);
+        setPollingTimeout(null);
       };
     }
-  }, [session, checkStatus, mockTimer]);
+    
+    // If already connected or no QR code, clear the polling
+    if (session?.connected || !session?.qrCode) {
+      if (pollingTimeout) {
+        clearTimeout(pollingTimeout);
+        setPollingTimeout(null);
+      }
+    }
+  }, [session, checkStatus, pollingTimeout]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
