@@ -81,6 +81,12 @@ const App = () => {
                   } 
                 />
 
+                {/* API Mock Routes - These would normally be handled by a backend */}
+                <Route 
+                  path="/api/whatsapp-status" 
+                  element={<div>{"{ status: \"connected\" }"}</div>}
+                />
+
                 {/* Catch All */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
