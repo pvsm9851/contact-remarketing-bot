@@ -20,6 +20,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import WhatsAppConnect from "./pages/WhatsAppConnect";
+import WhatsAppContacts from "./pages/WhatsAppContacts";
 import NotFound from "./pages/NotFound";
 
 const App = () => {
@@ -68,6 +69,14 @@ const App = () => {
                   element={
                     <RequireAuth>
                       <WhatsAppConnect />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/contatos" 
+                  element={
+                    <RequireAuth>
+                      <WhatsAppContacts />
                     </RequireAuth>
                   } 
                 />

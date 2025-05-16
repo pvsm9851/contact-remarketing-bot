@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { WhatsAppSession, WhatsAppChat } from "@/types";
+import { WhatsAppSession, WhatsAppChat, Contact } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -14,6 +14,10 @@ interface WhatsAppContextType {
   chats: WhatsAppChat[];
   loadingChats: boolean;
   fetchChats: () => Promise<void>;
+  contacts: Contact[];
+  loadingContacts: boolean;
+  uploadContacts: (file: File) => Promise<void>;
+  sendMessage: (phone: string, message: string) => Promise<void>;
 }
 
 const WhatsAppContext = createContext<WhatsAppContextType | undefined>(undefined);
@@ -33,6 +37,8 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [error, setError] = useState<string | null>(null);
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
   const [loadingChats, setLoadingChats] = useState<boolean>(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
   
   // N8N API configuration
   const N8N_API_URL = "https://api.mavicmkt.com.br";
@@ -280,6 +286,96 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // Function to upload contacts from CSV file
+  const uploadContacts = async (file: File): Promise<void> => {
+    setLoadingContacts(true);
+    
+    try {
+      const text = await file.text();
+      const rows = text.split('\n');
+      
+      // Skip header row and process the data
+      const parsedContacts: Contact[] = rows
+        .slice(1)
+        .filter(row => row.trim() !== '')
+        .map((row, index) => {
+          const [name, phone] = row.split(',').map(item => item.trim());
+          const formattedPhone = phone.replace(/\D/g, ''); // Remove non-digits
+          
+          return {
+            id: `contact-${index}`,
+            name: name || 'Sem nome',
+            phone: formattedPhone,
+            lastContact: new Date().toISOString()
+          };
+        });
+      
+      setContacts(parsedContacts);
+      
+      toast("Contatos importados", {
+        description: `${parsedContacts.length} contatos foram importados com sucesso!`
+      });
+      
+    } catch (error) {
+      console.error("Failed to parse CSV file:", error);
+      toast("Erro", {
+        description: "Falha ao processar o arquivo CSV. Verifique se o formato está correto."
+      });
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  // Function to send a WhatsApp message
+  const sendMessage = async (phone: string, message: string): Promise<void> => {
+    if (!session?.session || !session.connected) {
+      toast("Erro", {
+        description: "WhatsApp não está conectado."
+      });
+      return;
+    }
+    
+    try {
+      // Format phone number to make sure it has the country code
+      const formattedPhone = phone.startsWith('55') ? phone : `55${phone}`;
+      
+      const response = await fetch(`${N8N_API_URL}/message/sendText/${session.session}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": N8N_API_KEY
+        },
+        body: JSON.stringify({
+          number: `${formattedPhone}@s.whatsapp.net`,
+          options: {
+            delay: 1200
+          },
+          textMessage: message
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.key) {
+        toast("Mensagem enviada", {
+          description: "Sua mensagem foi enviada com sucesso!"
+        });
+      } else {
+        throw new Error("Failed to send message");
+      }
+      
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast("Erro", {
+        description: "Falha ao enviar mensagem. Por favor, tente novamente."
+      });
+    }
+  };
+
   return (
     <WhatsAppContext.Provider value={{ 
       session, 
@@ -290,7 +386,11 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       resetSession,
       chats,
       loadingChats,
-      fetchChats 
+      fetchChats,
+      contacts,
+      loadingContacts,
+      uploadContacts,
+      sendMessage
     }}>
       {children}
     </WhatsAppContext.Provider>

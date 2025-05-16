@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 const WhatsAppConnect = () => {
   const { session, isLoading, error, createSession, resetSession, chats, loadingChats, fetchChats } = useWhatsApp();
   const [activeTab, setActiveTab] = useState<string>("connect");
+  const navigate = useNavigate();
   
   // Automatically switch to chats tab when connected
   useEffect(() => {
@@ -30,6 +32,14 @@ const WhatsAppConnect = () => {
       createSession();
     }
   }, []);
+
+  // Check for connection status changes
+  useEffect(() => {
+    if (session?.connected) {
+      // Navigate to contacts page when connected
+      navigate("/contatos");
+    }
+  }, [session?.connected, navigate]);
 
   const handleSendMessage = (remoteJid: string, name: string) => {
     toast(`Preparando mensagem para ${name}`, {
@@ -115,10 +125,10 @@ const WhatsAppConnect = () => {
                       Desconectar WhatsApp
                     </Button>
                     <Button 
-                      onClick={() => setActiveTab("chats")}
+                      onClick={() => navigate("/contatos")}
                       className="flex-1"
                     >
-                      Ver Conversas
+                      Gerenciar Contatos
                     </Button>
                   </div>
                 ) : session?.qrCode ? (
@@ -213,8 +223,8 @@ const WhatsAppConnect = () => {
                 )}
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={() => setActiveTab("connect")}>
-                  Voltar
+                <Button variant="outline" onClick={() => navigate("/contatos")}>
+                  Gerenciar Contatos
                 </Button>
                 <Button onClick={fetchChats} disabled={loadingChats}>
                   {loadingChats ? "Atualizando..." : "Atualizar Conversas"}
