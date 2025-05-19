@@ -65,9 +65,6 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <p className="text-gray-700">Email: {auth.user?.email}</p>
-              {auth.user?.phone && (
-                <p className="text-gray-700">Telefone: {auth.user?.phone}</p>
-              )}
             </CardContent>
             <CardFooter>
               <Button variant="outline" className="w-full">

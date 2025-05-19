@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -29,28 +28,12 @@ const Register = () => {
     
     setIsLoading(true);
     try {
-      await register(email, password, name, phone);
+      await register(email, password, name);
     } catch (error) {
       console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }
-  };
-  
-  // Format phone number as user types (Brazilian format)
-  const formatPhone = (value: string) => {
-    const numericValue = value.replace(/\D/g, '');
-    let formattedValue = numericValue;
-    
-    if (numericValue.length > 2) {
-      formattedValue = `(${numericValue.slice(0, 2)}) ${numericValue.slice(2)}`;
-    }
-    
-    if (numericValue.length > 7) {
-      formattedValue = `(${numericValue.slice(0, 2)}) ${numericValue.slice(2, 7)}-${numericValue.slice(7, 11)}`;
-    }
-    
-    return formattedValue;
   };
 
   return (
@@ -88,17 +71,6 @@ const Register = () => {
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="phone" className="text-sm font-medium">Telefone (WhatsApp)</label>
-                <Input
-                  id="phone"
-                  placeholder="(00) 00000-0000"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
                   required
                 />
               </div>

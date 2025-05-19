@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -8,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface AuthContextType {
   auth: AuthState;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, phone: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   clearCache: () => void;
 }
@@ -91,8 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: data.id,
         email: data.email,
         name: data.name,
-        // Use phone from DB or empty string if not available - Note: this assumes phone exists in table
-        phone: data.phone || ''
+        phone: "" // Keep empty string for compatibility with existing code
       };
       
       localStorage.setItem("user", JSON.stringify(user));
@@ -115,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (email: string, password: string, name: string, phone: string) => {
+  const register = async (email: string, password: string, name: string) => {
     try {
       // Generate a unique ID for the user
       const id = crypto.randomUUID();
@@ -152,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newUser: User = {
         id,
         email,
-        phone,
+        phone: "", // Keep empty string for compatibility with existing code
         name,
       };
       

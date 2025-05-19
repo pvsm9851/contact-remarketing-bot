@@ -1,8 +1,7 @@
-
 export interface User {
   id: string;
   email: string;
-  phone: string;
+  phone: string; // Keeping for compatibility
   name: string;
 }
 
