@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: data.id,
         email: data.email,
         name: data.name,
-        phone: '' // Default empty since it's not stored in Supabase
+        phone: data.phone || '' // Use phone from DB or empty string if not available
       };
       
       localStorage.setItem("user", JSON.stringify(user));
@@ -134,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       // Call the N8N webhook to create user
-      const response = await fetch("https://n8n.mavicmkt.com.br/webhook/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18", {
+      const response = await fetch("https://webhook.mavicmkt.com.br/webhook/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

@@ -36,8 +36,8 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
   
   // N8N Webhook URLs
-  const N8N_QRCODE_WEBHOOK = "https://n8n.mavicmkt.com.br/webhook/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18";
-  const N8N_CHECK_CONNECTION = "https://n8n.mavicmkt.com.br/webhook/b66aa268-0ce8-4e95-9d31-23e8fba992ea";
+  const N8N_QRCODE_WEBHOOK = "https://webhook.mavicmkt.com.br/webhook/28bebbde-21e9-405d-be7f-e724638be60f";
+  const N8N_CHECK_CONNECTION = "https://webhook.mavicmkt.com.br/webhook/b66aa268-0ce8-4e95-9d31-23e8fba992ea";
   
   // Check if there's an existing session on mount
   useEffect(() => {

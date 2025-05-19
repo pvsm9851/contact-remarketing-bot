@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useWhatsApp } from "@/contexts/WhatsAppContext";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const WhatsAppConnect = () => {
@@ -40,6 +39,9 @@ const WhatsAppConnect = () => {
       // If connected, the useEffect above will navigate to the contacts page
     } catch (error) {
       console.error("Error validating connection:", error);
+      toast("Erro", {
+        description: "Falha ao validar conexão do WhatsApp."
+      });
     } finally {
       setValidating(false);
     }
