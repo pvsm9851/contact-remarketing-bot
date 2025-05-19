@@ -1,22 +1,13 @@
 
-import { useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWhatsApp } from "@/contexts/WhatsAppContext";
-import { Link } from "react-router-dom";
 
 const Dashboard = () => {
-  const { auth } = useAuth();
-  const { session } = useWhatsApp();
-  
-  // Mock data for dashboard
-  const stats = [
-    { label: "Total de Contatos", value: "0" },
-    { label: "Mensagens enviadas", value: "0" },
-    { label: "Taxa de abertura", value: "0%" },
-  ];
+  const navigate = useNavigate();
+  const { auth, clearCache } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -25,72 +16,64 @@ const Dashboard = () => {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Dashboard</h1>
+          
           <div className="flex gap-4">
-            <Button asChild variant="outline">
-              <Link to="/contatos">
-                Ver contatos
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link to="/mensagens/nova">
-                Nova mensagem
-              </Link>
+            <Button 
+              variant="outline"
+              onClick={() => clearCache()}
+            >
+              Limpar Cache
             </Button>
           </div>
         </div>
         
-        {!session?.connected && (
-          <Card className="mb-8 border-yellow-200 bg-yellow-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-yellow-800">Conecte seu WhatsApp</CardTitle>
-              <CardDescription className="text-yellow-700">
-                Para usar o sistema de remarketing, você precisa conectar sua conta do WhatsApp.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="bg-white border-yellow-300 text-yellow-800 hover:bg-yellow-100">
-                <Link to="/whatsapp">
-                  Conectar WhatsApp
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-        
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-2xl">{stat.value}</CardTitle>
-                <CardDescription>{stat.label}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-        
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>Atividade recente</CardTitle>
-              <CardDescription>Suas últimas interações no sistema</CardDescription>
+              <CardTitle>WhatsApp</CardTitle>
+              <CardDescription>Conecte seu WhatsApp para enviar mensagens</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-8 text-center text-gray-500">
-                <p>Nenhuma atividade recente.</p>
-              </div>
+              <p className="text-gray-700">Conecte seu celular para enviar mensagens para seus contatos de forma automatizada.</p>
             </CardContent>
+            <CardFooter>
+              <Button onClick={() => navigate("/whatsapp")} className="w-full">
+                Conectar WhatsApp
+              </Button>
+            </CardFooter>
           </Card>
           
           <Card>
             <CardHeader>
-              <CardTitle>Próximas mensagens</CardTitle>
-              <CardDescription>Mensagens agendadas para envio</CardDescription>
+              <CardTitle>Contatos</CardTitle>
+              <CardDescription>Gerencie seus contatos</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-8 text-center text-gray-500">
-                <p>Nenhuma mensagem agendada.</p>
-              </div>
+              <p className="text-gray-700">Importe contatos para poder enviar mensagens de remarketing.</p>
             </CardContent>
+            <CardFooter>
+              <Button onClick={() => navigate("/contatos")} className="w-full">
+                Gerenciar Contatos
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Bemvindo, {auth.user?.name}</CardTitle>
+              <CardDescription>Seu ID: {auth.user?.id}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700">Email: {auth.user?.email}</p>
+              {auth.user?.phone && (
+                <p className="text-gray-700">Telefone: {auth.user?.phone}</p>
+              )}
+            </CardContent>
+            <CardFooter>
+              <Button variant="outline" className="w-full">
+                Editar Perfil
+              </Button>
+            </CardFooter>
           </Card>
         </div>
       </main>

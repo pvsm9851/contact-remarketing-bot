@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, phone: string) => Promise<void>;
   logout: () => void;
+  clearCache: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,7 +91,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: data.id,
         email: data.email,
         name: data.name,
-        phone: data.phone || '' // Use phone from DB or empty string if not available
+        // Use phone from DB or empty string if not available - Note: this assumes phone exists in table
+        phone: data.phone || ''
       };
       
       localStorage.setItem("user", JSON.stringify(user));
@@ -134,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       // Call the N8N webhook to create user
-      const response = await fetch("https://webhook.mavicmkt.com.br/webhook/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18", {
+      const response = await fetch("https://editor.mavicmkt.com.br/webhook-test/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -188,8 +190,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate("/login");
   };
 
+  // Clear application cache
+  const clearCache = () => {
+    // Clear all localStorage items
+    localStorage.clear();
+    
+    // Reset auth state
+    setAuth({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+    
+    toast("Cache limpo com sucesso!", {
+      description: "Todos os dados locais foram removidos.",
+    });
+    
+    // Redirect to login
+    navigate("/login");
+  };
+
   return (
-    <AuthContext.Provider value={{ auth, login, register, logout }}>
+    <AuthContext.Provider value={{ auth, login, register, logout, clearCache }}>
       {children}
     </AuthContext.Provider>
   );

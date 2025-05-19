@@ -35,9 +35,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
   
-  // N8N Webhook URLs
-  const N8N_QRCODE_WEBHOOK = "https://webhook.mavicmkt.com.br/webhook/28bebbde-21e9-405d-be7f-e724638be60f";
-  const N8N_CHECK_CONNECTION = "https://webhook.mavicmkt.com.br/webhook/b66aa268-0ce8-4e95-9d31-23e8fba992ea";
+  // N8N Webhook Test URLs
+  const N8N_QRCODE_WEBHOOK = "https://editor.mavicmkt.com.br/webhook-test/28bebbde-21e9-405d-be7f-e724638be60f";
+  const N8N_CHECK_CONNECTION = "https://editor.mavicmkt.com.br/webhook-test/b66aa268-0ce8-4e95-9d31-23e8fba992ea";
   
   // Check if there's an existing session on mount
   useEffect(() => {
@@ -78,6 +78,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
       
       const data = await response.json();
+      console.log("QR code response:", data);
       
       if (data.qrcode && data.qrcode.base64) {
         // Store the session and QR code
