@@ -61,37 +61,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      // In a real app, this would be an API call
-      // For now, we'll simulate a login
-      if (email && password) {
-        // Check localStorage for existing user with this email
-        const storedUsers = localStorage.getItem("users");
-        const users = storedUsers ? JSON.parse(storedUsers) : [];
-        const user = users.find((u: User) => u.email === email);
-        
-        if (!user) {
-          toast("Erro ao fazer login", {
-            description: "E-mail não encontrado.",
-          });
-          return;
-        }
+      // Get users from Supabase
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
 
-        // In a real app, you'd verify the password here
-        // For demo purposes, we're skipping password verification
-        
-        localStorage.setItem("user", JSON.stringify(user));
-        setAuth({
-          user,
-          isAuthenticated: true,
-          isLoading: false,
+      if (error || !data) {
+        console.error("Login error:", error);
+        toast("Erro ao fazer login", {
+          description: "E-mail não encontrado.",
         });
-        
-        toast("Login realizado com sucesso!", {
-          description: `Bem-vindo(a) de volta, ${user.name}!`,
-        });
-        
-        navigate("/dashboard");
+        return;
       }
+
+      // In a real app, you'd verify the password hash here
+      // For demo, we'll just check if the passwords match
+      if (data.password !== password) {
+        toast("Erro ao fazer login", {
+          description: "Senha incorreta.",
+        });
+        return;
+      }
+      
+      // Create user object from Supabase data
+      const user: User = {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        phone: '' // Default empty since it's not stored in Supabase
+      };
+      
+      localStorage.setItem("user", JSON.stringify(user));
+      setAuth({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      
+      toast("Login realizado com sucesso!", {
+        description: `Bem-vindo(a) de volta, ${user.name}!`,
+      });
+      
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
       toast("Erro ao fazer login", {
@@ -105,14 +118,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Generate a unique ID for the user
       const id = crypto.randomUUID();
       const timestamp = new Date().toISOString();
-      
-      // Create a new user object
-      const newUser: User = {
-        id,
-        email,
-        phone,
-        name,
-      };
       
       // Create session ID
       const sessionTimestamp = Date.now();
@@ -141,26 +146,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Failed to register user with N8N");
       }
       
-      // Also store in Supabase
-      const { error } = await supabase.from('users').insert([{
+      // Create a new user object
+      const newUser: User = {
         id,
-        name,
         email,
-        password,
-        instance,
-        created_at: timestamp
-      }]);
-      
-      if (error) {
-        console.error("Supabase insert error:", error);
-        throw new Error("Failed to register user with Supabase");
-      }
-      
-      // Save locally too for the app to work
-      const storedUsers = localStorage.getItem("users");
-      const users = storedUsers ? JSON.parse(storedUsers) : [];
-      users.push(newUser);
-      localStorage.setItem("users", JSON.stringify(users));
+        phone,
+        name,
+      };
       
       // Log the user in
       localStorage.setItem("user", JSON.stringify(newUser));

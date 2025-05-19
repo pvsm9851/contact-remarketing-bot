@@ -28,8 +28,13 @@ const Register = () => {
     }
     
     setIsLoading(true);
-    await register(email, password, name, phone);
-    setIsLoading(false);
+    try {
+      await register(email, password, name, phone);
+    } catch (error) {
+      console.error("Registration error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // Format phone number as user types (Brazilian format)

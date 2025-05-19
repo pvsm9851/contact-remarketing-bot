@@ -69,9 +69,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          session: auth.user.id,
-          name: auth.user.name,
-          email: auth.user.email
+          session: auth.user.id
         })
       });
       
@@ -136,7 +134,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       if (data.status === "connected") {
         updateSessionStatus(auth.user.id, true);
-      } else if (data.status === "offline") {
+      } else {
         toast("WhatsApp desconectado", {
           description: "Seu WhatsApp não está conectado. Tente escanear o QR code novamente."
         });
