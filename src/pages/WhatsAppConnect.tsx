@@ -10,8 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 const WhatsAppConnect = () => {
-  const { session, isLoading, error, createSession, resetSession } = useWhatsApp();
+  const { session, isLoading, error, createSession, checkStatus, resetSession } = useWhatsApp();
   const navigate = useNavigate();
+  const [validating, setValidating] = useState(false);
   
   // Auto-connect when page loads if no session exists
   useEffect(() => {
@@ -29,42 +30,20 @@ const WhatsAppConnect = () => {
     }
   }, [session?.connected, navigate]);
 
-  // Poll for webhook response
-  useEffect(() => {
-    let intervalId: number;
+  const handleValidateConnection = async () => {
+    if (!session) return;
     
-    if (session?.qrCode && !session.connected) {
-      // Start polling for connection status via webhook
-      intervalId = window.setInterval(async () => {
-        try {
-          const response = await fetch(`${window.location.origin}/api/whatsapp-status`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.status === "connected") {
-              // Update local session status when webhook responds with connected
-              if (session) {
-                const updatedSession = {
-                  ...session,
-                  connected: true
-                };
-                localStorage.setItem(`whatsapp_session_${JSON.parse(localStorage.getItem('auth') || '{}')?.user?.id || 'unknown'}`, JSON.stringify(updatedSession));
-                // Redirect to contacts page
-                navigate('/contatos');
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error checking webhook status:", error);
-        }
-      }, 5000); // Check every 5 seconds
+    setValidating(true);
+    try {
+      await checkStatus();
+      // We'll handle the connection status update in the checkStatus function
+      // If connected, the useEffect above will navigate to the contacts page
+    } catch (error) {
+      console.error("Error validating connection:", error);
+    } finally {
+      setValidating(false);
     }
-    
-    return () => {
-      if (intervalId) {
-        window.clearInterval(intervalId);
-      }
-    };
-  }, [session, navigate]);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -144,13 +123,22 @@ const WhatsAppConnect = () => {
                 </Button>
               </div>
             ) : session?.qrCode ? (
-              <Button 
-                variant="outline" 
-                onClick={resetSession}
-                className="w-full"
-              >
-                Cancelar
-              </Button>
+              <div className="flex gap-4 w-full">
+                <Button 
+                  variant="outline" 
+                  onClick={resetSession}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleValidateConnection}
+                  disabled={validating}
+                  className="flex-1"
+                >
+                  {validating ? "Validando..." : "Validar Conexão"}
+                </Button>
+              </div>
             ) : (
               <Button 
                 onClick={createSession} 

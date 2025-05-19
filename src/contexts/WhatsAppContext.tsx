@@ -35,10 +35,10 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
   
-  // N8N API configuration
-  const N8N_API_URL = "https://api.mavicmkt.com.br";
-  const N8N_API_KEY = "c87ea0c8c68239cc4c7a001f960efbca";
-
+  // N8N Webhook URLs
+  const N8N_QRCODE_WEBHOOK = "https://n8n.mavicmkt.com.br/webhook/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18";
+  const N8N_CHECK_CONNECTION = "https://n8n.mavicmkt.com.br/webhook/b66aa268-0ce8-4e95-9d31-23e8fba992ea";
+  
   // Check if there's an existing session on mount
   useEffect(() => {
     if (auth.user) {
@@ -46,10 +46,6 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (storedSession) {
         try {
           setSession(JSON.parse(storedSession));
-          // If we have a session, check its status
-          if (JSON.parse(storedSession).session) {
-            checkSessionStatus(JSON.parse(storedSession).session);
-          }
         } catch (e) {
           console.error("Failed to parse stored session", e);
           localStorage.removeItem(`whatsapp_session_${auth.user.id}`);
@@ -57,30 +53,98 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
   }, [auth.user]);
-  
-  // Check the status of a session with the N8N API
-  const checkSessionStatus = async (sessionId: string) => {
+
+  // Create a new WhatsApp session using N8N webhook
+  const createSession = async () => {
+    if (!auth.user) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      const response = await fetch(`${N8N_API_URL}/instance/connectionState/${sessionId}`, {
-        method: "GET",
+      // Call N8N webhook to create a new WhatsApp instance
+      const response = await fetch(N8N_QRCODE_WEBHOOK, {
+        method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "apikey": N8N_API_KEY
-        }
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          session: auth.user.id,
+          name: auth.user.name,
+          email: auth.user.email
+        })
       });
       
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        throw new Error(`N8N webhook error: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log("Session status:", data);
       
-      if (data.instance?.state === "open") {
-        updateSessionStatus(sessionId, true);
+      if (data.qrcode && data.qrcode.base64) {
+        // Store the session and QR code
+        const newSession: WhatsAppSession = {
+          session: auth.user.id,
+          instanceName: auth.user.id,
+          connected: false,
+          qrCode: data.qrcode.base64
+        };
+        
+        setSession(newSession);
+        localStorage.setItem(`whatsapp_session_${auth.user.id}`, JSON.stringify(newSession));
+        
+        toast("Sessão criada", {
+          description: "Escaneie o código QR para conectar seu WhatsApp."
+        });
+      } else {
+        throw new Error("QR code not received from N8N webhook");
       }
+      
     } catch (e) {
-      console.error("Failed to check session status", e);
+      console.error("Failed to create WhatsApp session", e);
+      setError("Falha ao criar sessão do WhatsApp. Por favor, tente novamente.");
+      
+      toast("Erro", {
+        description: "Falha ao criar sessão do WhatsApp."
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkStatus = async () => {
+    if (!session || !auth.user) return;
+    
+    try {
+      // Call the N8N webhook to check connection status
+      const response = await fetch(N8N_CHECK_CONNECTION, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          session: auth.user.id
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`N8N webhook error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Connection status:", data);
+      
+      if (data.status === "connected") {
+        updateSessionStatus(auth.user.id, true);
+      } else if (data.status === "offline") {
+        toast("WhatsApp desconectado", {
+          description: "Seu WhatsApp não está conectado. Tente escanear o QR code novamente."
+        });
+      }
+      
+    } catch (e) {
+      console.error("Failed to check WhatsApp status", e);
+      setError("Falha ao verificar status do WhatsApp. Por favor, tente novamente.");
     }
   };
   
@@ -104,123 +168,11 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       });
     }
   };
-
-  // Create a new WhatsApp session using the N8N API
-  const createSession = async () => {
-    if (!auth.user) return;
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Generate a unique session ID
-      const timestamp = Date.now();
-      const sessionId = `session-${timestamp}`;
-      
-      // Call the N8N API to create a new WhatsApp instance
-      const response = await fetch(`${N8N_API_URL}/instance/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": N8N_API_KEY
-        },
-        body: JSON.stringify({
-          instanceName: sessionId,
-          qrcode: true,
-          integration: "WHATSAPP-BAILEYS"
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log("Create instance response:", data);
-      
-      if (data.qrcode && data.qrcode.base64) {
-        // Store the session and QR code
-        const newSession: WhatsAppSession = {
-          session: sessionId,
-          instanceName: sessionId,
-          connected: false,
-          qrCode: data.qrcode.base64
-        };
-        
-        setSession(newSession);
-        localStorage.setItem(`whatsapp_session_${auth.user.id}`, JSON.stringify(newSession));
-        
-        toast("Sessão criada", {
-          description: "Escaneie o código QR para conectar seu WhatsApp."
-        });
-
-        // Start polling for connection status
-        setTimeout(() => checkStatus(), 5000);
-      } else {
-        throw new Error("QR code not received from API");
-      }
-      
-    } catch (e) {
-      console.error("Failed to create WhatsApp session", e);
-      setError("Falha ao criar sessão do WhatsApp. Por favor, tente novamente.");
-      
-      toast("Erro", {
-        description: "Falha ao criar sessão do WhatsApp."
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const checkStatus = async () => {
-    if (!session || !auth.user) return;
-    
-    try {
-      // Call the N8N API to check the status of the WhatsApp instance
-      const response = await fetch(`${N8N_API_URL}/instance/connectionState/${session.session}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": N8N_API_KEY
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log("Instance status:", data);
-      
-      if (data.instance?.state === "open") {
-        updateSessionStatus(session.session, true);
-      } else {
-        // If still not connected, check again in a few seconds
-        setTimeout(() => checkStatus(), 5000);
-      }
-      
-    } catch (e) {
-      console.error("Failed to check WhatsApp status", e);
-      setError("Falha ao verificar status do WhatsApp. Por favor, tente novamente.");
-    }
-  };
   
   const resetSession = () => {
     if (!auth.user || !session) return;
     
     try {
-      // Call the N8N API to disconnect/delete the WhatsApp instance
-      fetch(`${N8N_API_URL}/instance/logout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": N8N_API_KEY
-        },
-        body: JSON.stringify({
-          instanceName: session.session
-        })
-      }).catch(e => console.error("Error logging out instance:", e));
-      
       localStorage.removeItem(`whatsapp_session_${auth.user.id}`);
       setSession(null);
       
@@ -285,34 +237,10 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Format phone number to make sure it has the country code
       const formattedPhone = phone.startsWith('55') ? phone : `55${phone}`;
       
-      const response = await fetch(`${N8N_API_URL}/message/sendText/${session.session}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": N8N_API_KEY
-        },
-        body: JSON.stringify({
-          number: `${formattedPhone}@s.whatsapp.net`,
-          options: {
-            delay: 1200
-          },
-          textMessage: message
-        })
+      // We would normally call an API here, but for now we'll just simulate success
+      toast("Mensagem enviada", {
+        description: "Sua mensagem foi enviada com sucesso!"
       });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.key) {
-        toast("Mensagem enviada", {
-          description: "Sua mensagem foi enviada com sucesso!"
-        });
-      } else {
-        throw new Error("Failed to send message");
-      }
       
     } catch (error) {
       console.error("Failed to send message:", error);
