@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { MessageSquare } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -54,6 +55,21 @@ const Dashboard = () => {
             <CardFooter>
               <Button onClick={() => navigate("/contatos")} className="w-full">
                 Gerenciar Contatos
+              </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Conversas</CardTitle>
+              <CardDescription>Visualize suas conversas de WhatsApp</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center">
+              <MessageSquare className="h-20 w-20 text-primary opacity-20" />
+            </CardContent>
+            <CardFooter>
+              <Button onClick={() => navigate("/chats")} className="w-full">
+                Ver Conversas
               </Button>
             </CardFooter>
           </Card>

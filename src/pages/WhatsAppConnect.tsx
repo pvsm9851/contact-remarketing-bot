@@ -9,7 +9,7 @@ import { useWhatsApp } from "@/contexts/WhatsAppContext";
 import { toast } from "sonner";
 
 const WhatsAppConnect = () => {
-  const { session, isLoading, error, createSession, checkStatus, resetSession } = useWhatsApp();
+  const { session, isLoading, error, createSession, checkStatus, resetSession, fetchChats } = useWhatsApp();
   const navigate = useNavigate();
   const [validating, setValidating] = useState(false);
   
@@ -24,10 +24,10 @@ const WhatsAppConnect = () => {
   // Check for connection status changes
   useEffect(() => {
     if (session?.connected) {
-      // Navigate to contacts page when connected
-      navigate("/contatos");
+      // Fetch chats when connected
+      fetchChats();
     }
-  }, [session?.connected, navigate]);
+  }, [session?.connected]);
 
   const handleValidateConnection = async () => {
     if (!session) return;
@@ -35,8 +35,10 @@ const WhatsAppConnect = () => {
     setValidating(true);
     try {
       await checkStatus();
-      // We'll handle the connection status update in the checkStatus function
-      // If connected, the useEffect above will navigate to the contacts page
+      // After checking status, if we're connected, navigate to chats
+      if (session.connected) {
+        navigate("/chats");
+      }
     } catch (error) {
       console.error("Error validating connection:", error);
       toast("Erro", {
@@ -118,10 +120,10 @@ const WhatsAppConnect = () => {
                   Desconectar WhatsApp
                 </Button>
                 <Button 
-                  onClick={() => navigate("/contatos")}
+                  onClick={() => navigate("/chats")}
                   className="flex-1"
                 >
-                  Gerenciar Contatos
+                  Ver Conversas
                 </Button>
               </div>
             ) : session?.qrCode ? (

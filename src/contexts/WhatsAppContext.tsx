@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { WhatsAppSession, Contact } from "@/types";
+import { WhatsAppSession, Contact, WhatsAppChat } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -15,6 +15,9 @@ interface WhatsAppContextType {
   loadingContacts: boolean;
   uploadContacts: (file: File) => Promise<void>;
   sendMessage: (phone: string, message: string) => Promise<void>;
+  chats: WhatsAppChat[];
+  loadingChats: boolean;
+  fetchChats: () => Promise<void>;
 }
 
 const WhatsAppContext = createContext<WhatsAppContextType | undefined>(undefined);
@@ -34,10 +37,13 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [error, setError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
+  const [chats, setChats] = useState<WhatsAppChat[]>([]);
+  const [loadingChats, setLoadingChats] = useState<boolean>(false);
   
-  // N8N Webhook Test URLs
-  const N8N_QRCODE_WEBHOOK = "https://editor.mavicmkt.com.br/webhook-test/28bebbde-21e9-405d-be7f-e724638be60f";
-  const N8N_CHECK_CONNECTION = "https://editor.mavicmkt.com.br/webhook-test/b66aa268-0ce8-4e95-9d31-23e8fba992ea";
+  // Webhook URLs
+  const WEBHOOK_QRCODE_GENERATE = "https://webhook.mavicmkt.com.br/webhook/28bebbde-21e9-405d-be7f-e724638be60f";
+  const WEBHOOK_CHECK_CONNECTION = "https://webhook.mavicmkt.com.br/webhook/b66aa268-0ce8-4e95-9d31-23e8fba992ea";
+  const WEBHOOK_GET_CHATS = "https://webhook.mavicmkt.com.br/webhook/d2558660-69f3-470e-82af-1d57266790b8";
   
   // Check if there's an existing session on mount
   useEffect(() => {
@@ -45,7 +51,13 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const storedSession = localStorage.getItem(`whatsapp_session_${auth.user.id}`);
       if (storedSession) {
         try {
-          setSession(JSON.parse(storedSession));
+          const parsedSession = JSON.parse(storedSession);
+          setSession(parsedSession);
+          
+          // If session exists, check connection status
+          if (parsedSession) {
+            checkStatus();
+          }
         } catch (e) {
           console.error("Failed to parse stored session", e);
           localStorage.removeItem(`whatsapp_session_${auth.user.id}`);
@@ -54,7 +66,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [auth.user]);
 
-  // Create a new WhatsApp session using N8N webhook
+  // Create a new WhatsApp session
   const createSession = async () => {
     if (!auth.user) return;
     
@@ -62,31 +74,31 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
     
     try {
-      // Call N8N webhook to create a new WhatsApp instance
-      const response = await fetch(N8N_QRCODE_WEBHOOK, {
+      // Call the webhook to create QR code
+      const response = await fetch(WEBHOOK_QRCODE_GENERATE, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          session: auth.user.id
+          instance: `session-${Date.now()}`
         })
       });
       
       if (!response.ok) {
-        throw new Error(`N8N webhook error: ${response.status}`);
+        throw new Error(`Webhook error: ${response.status}`);
       }
       
       const data = await response.json();
       console.log("QR code response:", data);
       
-      if (data.qrcode && data.qrcode.base64) {
+      if (data.image) {
         // Store the session and QR code
         const newSession: WhatsAppSession = {
           session: auth.user.id,
           instanceName: auth.user.id,
           connected: false,
-          qrCode: data.qrcode.base64
+          qrCode: data.image
         };
         
         setSession(newSession);
@@ -96,7 +108,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           description: "Escaneie o código QR para conectar seu WhatsApp."
         });
       } else {
-        throw new Error("QR code not received from N8N webhook");
+        throw new Error("QR code not received from webhook");
       }
       
     } catch (e) {
@@ -115,19 +127,19 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!session || !auth.user) return;
     
     try {
-      // Call the N8N webhook to check connection status
-      const response = await fetch(N8N_CHECK_CONNECTION, {
+      // Call the webhook to check connection status
+      const response = await fetch(WEBHOOK_CHECK_CONNECTION, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          session: auth.user.id
+          instance: `session-${Date.now()}`
         })
       });
       
       if (!response.ok) {
-        throw new Error(`N8N webhook error: ${response.status}`);
+        throw new Error(`Webhook error: ${response.status}`);
       }
       
       const data = await response.json();
@@ -135,7 +147,8 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       if (data.status === "connected") {
         updateSessionStatus(auth.user.id, true);
-      } else {
+      } else if (data.status === "offline") {
+        updateSessionStatus(auth.user.id, false);
         toast("WhatsApp desconectado", {
           description: "Seu WhatsApp não está conectado. Tente escanear o QR code novamente."
         });
@@ -165,6 +178,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       toast("WhatsApp conectado", {
         description: "Seu WhatsApp foi conectado com sucesso!"
       });
+      
+      // When connected, fetch chats
+      fetchChats();
     }
   };
   
@@ -174,12 +190,52 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       localStorage.removeItem(`whatsapp_session_${auth.user.id}`);
       setSession(null);
+      setChats([]);
       
       toast("Sessão resetada", {
         description: "A conexão com WhatsApp foi desfeita."
       });
     } catch (e) {
       console.error("Failed to reset session", e);
+    }
+  };
+
+  // Function to fetch WhatsApp chats
+  const fetchChats = async (): Promise<void> => {
+    if (!session?.connected) {
+      return;
+    }
+    
+    setLoadingChats(true);
+    
+    try {
+      // Call the webhook to fetch chats
+      const response = await fetch(WEBHOOK_GET_CHATS, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          instance: `session-${Date.now()}`
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Webhook error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Fetched chats:", data);
+      
+      setChats(data);
+      
+    } catch (e) {
+      console.error("Failed to fetch chats:", e);
+      toast("Erro", {
+        description: "Falha ao buscar conversas. Por favor, tente novamente."
+      });
+    } finally {
+      setLoadingChats(false);
     }
   };
 
@@ -260,7 +316,10 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       contacts,
       loadingContacts,
       uploadContacts,
-      sendMessage
+      sendMessage,
+      chats,
+      loadingChats,
+      fetchChats
     }}>
       {children}
     </WhatsAppContext.Provider>
