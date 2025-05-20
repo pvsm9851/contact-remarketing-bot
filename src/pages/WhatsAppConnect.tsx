@@ -4,48 +4,52 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useWhatsApp } from "@/contexts/WhatsAppContext";
 import { toast } from "sonner";
+import { useWhatsApp } from "@/contexts/WhatsAppContext";
 
 const WhatsAppConnect = () => {
-  const { session, isLoading, error, createSession, checkStatus, resetSession, fetchChats } = useWhatsApp();
+  const { session, isLoading, error, generateQRCode, checkConnection } = useWhatsApp();
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [checkingConnection, setCheckingConnection] = useState(false);
   const navigate = useNavigate();
-  const [validating, setValidating] = useState(false);
-  
-  // Auto-connect when page loads if no session exists
-  useEffect(() => {
-    const shouldAutoConnect = !session && !isLoading;
-    if (shouldAutoConnect) {
-      createSession();
-    }
-  }, []);
 
-  // Check for connection status changes
   useEffect(() => {
     if (session?.connected) {
-      // Fetch chats when connected
-      fetchChats();
+      navigate("/chats");
+    } else if (session?.qrCode) {
+      setQrCode(session.qrCode);
     }
-  }, [session?.connected]);
+  }, [session, navigate]);
 
-  const handleValidateConnection = async () => {
-    if (!session) return;
-    
-    setValidating(true);
-    try {
-      await checkStatus();
-      // After checking status, if we're connected, navigate to chats
-      if (session.connected) {
-        navigate("/chats");
-      }
-    } catch (error) {
-      console.error("Error validating connection:", error);
-      toast("Erro", {
-        description: "Falha ao validar conexão do WhatsApp."
+  const handleGenerateQRCode = async () => {
+    const code = await generateQRCode();
+    if (code) {
+      setQrCode(code);
+      toast("QR Code gerado", {
+        description: "Escaneie o código com seu WhatsApp para conectar.",
       });
+    } else {
+      toast("Erro ao gerar QR Code", {
+        description: "Ocorreu um erro ao tentar gerar o QR Code. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCheckConnection = async () => {
+    setCheckingConnection(true);
+    try {
+      const isConnected = await checkConnection();
+      if (isConnected) {
+        navigate("/chats");
+      } else {
+        toast("WhatsApp não conectado", {
+          description: "Escaneie o QR Code novamente com seu WhatsApp.",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setValidating(false);
+      setCheckingConnection(false);
     }
   };
 
@@ -54,106 +58,72 @@ const WhatsAppConnect = () => {
       <Header />
       
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">WhatsApp</h1>
-        </div>
+        <h1 className="text-3xl font-bold mb-8">Conecte seu WhatsApp</h1>
         
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle>Status da Conexão</CardTitle>
-            <CardDescription>
-              Conecte seu WhatsApp para enviar mensagens de remarketing
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {session?.connected ? (
-              <Alert className="bg-green-50 border-green-200">
-                <AlertTitle className="text-green-800">WhatsApp conectado</AlertTitle>
-                <AlertDescription className="text-green-700">
-                  Seu WhatsApp está conectado e pronto para enviar mensagens.
-                </AlertDescription>
-              </Alert>
-            ) : session?.qrCode ? (
-              <div className="text-center">
-                <p className="mb-4 text-gray-700">
-                  Escaneie o código QR abaixo com seu WhatsApp:
-                </p>
-                <div className="border bg-white p-4 inline-block mb-4">
-                  <img 
-                    src={session.qrCode} 
-                    alt="QR Code para conectar WhatsApp" 
-                    className="w-64 h-64"
-                  />
+        <div className="max-w-2xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle>Conectar WhatsApp</CardTitle>
+              <CardDescription>
+                Escaneie o QR Code com seu WhatsApp para conectar sua conta
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              {qrCode ? (
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="border border-gray-300 p-4 rounded-md">
+                    <img 
+                      src={qrCode} 
+                      alt="WhatsApp QR Code" 
+                      className="w-64 h-64"
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Abra o WhatsApp no seu celular, vá em Menu ou Configurações e toque em WhatsApp Web
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500">
-                  Abra o WhatsApp no seu telefone → Menu (⋮) → WhatsApp Web → Escanear código QR
-                </p>
-              </div>
-            ) : error ? (
-              <Alert variant="destructive">
-                <AlertTitle>Erro</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : isLoading ? (
-              <div className="text-center py-8">
-                <p className="mb-4 text-gray-700">
-                  Gerando código QR...
-                </p>
-                <div className="w-64 h-64 mx-auto bg-gray-100 animate-pulse"></div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="mb-4 text-gray-700">
-                  Você precisa conectar seu WhatsApp para poder enviar mensagens de remarketing.
-                </p>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            {session?.connected ? (
-              <div className="flex gap-4 w-full">
-                <Button 
-                  variant="destructive" 
-                  onClick={resetSession}
-                  className="flex-1"
-                >
-                  Desconectar WhatsApp
-                </Button>
-                <Button 
-                  onClick={() => navigate("/chats")}
-                  className="flex-1"
-                >
-                  Ver Conversas
-                </Button>
-              </div>
-            ) : session?.qrCode ? (
-              <div className="flex gap-4 w-full">
-                <Button 
-                  variant="outline" 
-                  onClick={resetSession}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleValidateConnection}
-                  disabled={validating}
-                  className="flex-1"
-                >
-                  {validating ? "Validando..." : "Validar Conexão"}
-                </Button>
-              </div>
-            ) : (
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <p className="text-center text-gray-600">
+                    Clique no botão abaixo para gerar um QR Code
+                  </p>
+                  {error && (
+                    <p className="text-red-500 text-sm">{error}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+            
+            <CardFooter className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
               <Button 
-                onClick={createSession} 
+                onClick={handleGenerateQRCode}
                 disabled={isLoading}
-                className="w-full"
+                className="w-full sm:w-auto"
               >
-                {isLoading ? "Gerando código..." : "Conectar WhatsApp"}
+                {isLoading ? "Gerando..." : qrCode ? "Gerar Novo QR Code" : "Gerar QR Code"}
               </Button>
-            )}
-          </CardFooter>
-        </Card>
+              
+              {qrCode && (
+                <Button 
+                  onClick={handleCheckConnection}
+                  disabled={checkingConnection}
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                >
+                  {checkingConnection ? "Verificando..." : "Validar Conexão"}
+                </Button>
+              )}
+            </CardFooter>
+          </Card>
+          
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              Para usar o WhatsReMKT, é necessário conectar sua conta do WhatsApp.<br />
+              Não se preocupe, não temos acesso às suas mensagens pessoais.
+            </p>
+          </div>
+        </div>
       </main>
     </div>
   );

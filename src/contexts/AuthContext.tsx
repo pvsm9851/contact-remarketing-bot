@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -133,8 +134,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         instance
       };
       
+      console.log("Sending data to N8N webhook:", webhookData);
+      
       // Call the N8N webhook to create user
-      const response = await fetch("https://editor.mavicmkt.com.br/webhook-test/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18", {
+      const response = await fetch("https://webhook.mavicmkt.com.br/webhook/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -142,8 +145,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify(webhookData)
       });
       
+      console.log("N8N response:", response);
+      
       if (!response.ok) {
-        throw new Error("Failed to register user with N8N");
+        throw new Error(`Failed to register user with N8N: ${response.status} ${response.statusText}`);
+      }
+
+      // Try to parse response
+      let responseData;
+      try {
+        responseData = await response.json();
+        console.log("N8N response data:", responseData);
+      } catch (error) {
+        console.warn("Could not parse response as JSON:", error);
       }
       
       // Create a new user object
@@ -170,7 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("Registration error:", error);
       toast("Erro ao registrar", {
-        description: "Houve um problema ao tentar criar sua conta.",
+        description: "Houve um problema ao tentar criar sua conta. Por favor, tente novamente mais tarde.",
       });
     }
   };
