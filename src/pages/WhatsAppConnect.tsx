@@ -26,12 +26,11 @@ const WhatsAppConnect = () => {
     if (code) {
       setQrCode(code);
       toast("QR Code gerado", {
-        description: "Escaneie o código com seu WhatsApp para conectar.",
+        description: "Escaneie o código com seu WhatsApp para conectar."
       });
     } else {
       toast("Erro ao gerar QR Code", {
-        description: "Ocorreu um erro ao tentar gerar o QR Code. Tente novamente.",
-        variant: "destructive",
+        description: "Ocorreu um erro ao tentar gerar o QR Code. Tente novamente."
       });
     }
   };
@@ -44,8 +43,7 @@ const WhatsAppConnect = () => {
         navigate("/chats");
       } else {
         toast("WhatsApp não conectado", {
-          description: "Escaneie o QR Code novamente com seu WhatsApp.",
-          variant: "destructive",
+          description: "Escaneie o QR Code novamente com seu WhatsApp."
         });
       }
     } finally {

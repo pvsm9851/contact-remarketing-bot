@@ -2,18 +2,22 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
-import { WhatsAppSession, WhatsAppChat } from "@/types";
+import { WhatsAppSession, WhatsAppChat, Contact } from "@/types";
 import { apiService } from "@/services/apiService";
 
 interface WhatsAppContextType {
   session: WhatsAppSession | null;
   chats: WhatsAppChat[];
+  contacts: Contact[];
   isLoading: boolean;
+  loadingContacts: boolean;
   error: string | null;
   generateQRCode: () => Promise<string | null>;
   checkConnection: () => Promise<boolean>;
   getChats: () => Promise<WhatsAppChat[]>;
   disconnectSession: () => void;
+  uploadContacts: (file: File) => Promise<boolean>;
+  sendMessage: (phone: string, message: string) => Promise<boolean>;
 }
 
 const WhatsAppContext = createContext<WhatsAppContextType | undefined>(undefined);
@@ -30,7 +34,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { auth } = useAuth();
   const [session, setSession] = useState<WhatsAppSession | null>(null);
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load session from localStorage on mount
@@ -45,6 +51,13 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         localStorage.removeItem("whatsapp_session");
       }
     }
+    
+    // Load demo contacts for now
+    setContacts([
+      { id: '1', name: 'João Silva', phone: '5511999999999' },
+      { id: '2', name: 'Maria Oliveira', phone: '5511988888888' },
+      { id: '3', name: 'Carlos Pereira', phone: '5511977777777' },
+    ]);
   }, []);
 
   // Generate QR Code
@@ -127,14 +140,14 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         
         if (isConnected) {
           toast("WhatsApp conectado", {
-            description: "Seu WhatsApp está conectado com sucesso!",
+            description: "Seu WhatsApp está conectado com sucesso!"
           });
           
           // If connected, fetch chats
           await getChats();
         } else {
           toast("WhatsApp não conectado", {
-            description: "Por favor, escaneie o QR code novamente.",
+            description: "Por favor, escaneie o QR code novamente."
           });
         }
         
@@ -189,6 +202,71 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // Upload contacts
+  const uploadContacts = async (file: File): Promise<boolean> => {
+    setLoadingContacts(true);
+    try {
+      // For demonstration purposes only
+      // In a real scenario, this would parse the CSV and send to backend
+      console.log("Uploading contacts file:", file.name);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast("Contatos importados", {
+        description: "Seus contatos foram importados com sucesso."
+      });
+      
+      // Add additional demo contacts
+      const newContacts = [
+        ...contacts,
+        { id: '4', name: 'Ana Souza', phone: '5511966666666' },
+        { id: '5', name: 'Roberto Santos', phone: '5511955555555' },
+      ];
+      
+      setContacts(newContacts);
+      return true;
+    } catch (err) {
+      console.error("Error uploading contacts:", err);
+      toast("Erro ao importar contatos", {
+        description: "Ocorreu um erro ao importar seus contatos."
+      });
+      return false;
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  // Send message
+  const sendMessage = async (phone: string, message: string): Promise<boolean> => {
+    if (!session || !session.connected) {
+      toast("WhatsApp não conectado", {
+        description: "Conecte seu WhatsApp antes de enviar mensagens."
+      });
+      return false;
+    }
+
+    try {
+      // For demonstration purposes only
+      console.log(`Sending message to ${phone}: ${message}`);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast("Mensagem enviada", {
+        description: "Sua mensagem foi enviada com sucesso."
+      });
+      
+      return true;
+    } catch (err) {
+      console.error("Error sending message:", err);
+      toast("Erro ao enviar mensagem", {
+        description: "Ocorreu um erro ao enviar sua mensagem."
+      });
+      return false;
+    }
+  };
+
   // Disconnect session
   const disconnectSession = () => {
     localStorage.removeItem("whatsapp_session");
@@ -201,12 +279,16 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         session,
         chats,
+        contacts,
         isLoading,
+        loadingContacts,
         error,
         generateQRCode,
         checkConnection,
         getChats,
-        disconnectSession
+        disconnectSession,
+        uploadContacts,
+        sendMessage
       }}
     >
       {children}

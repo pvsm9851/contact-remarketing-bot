@@ -27,8 +27,7 @@ const WhatsAppChats = () => {
       const isConnected = await checkConnection();
       if (!isConnected) {
         toast("WhatsApp não conectado", {
-          description: "Você precisa conectar seu WhatsApp para ver as conversas.",
-          variant: "destructive",
+          description: "Você precisa conectar seu WhatsApp para ver as conversas."
         });
         navigate("/whatsapp");
       }
@@ -51,8 +50,7 @@ const WhatsAppChats = () => {
     } catch (error) {
       console.error("Error loading chats:", error);
       toast("Erro ao carregar conversas", {
-        description: "Ocorreu um erro ao carregar suas conversas do WhatsApp.",
-        variant: "destructive",
+        description: "Ocorreu um erro ao carregar suas conversas do WhatsApp."
       });
     }
   };
@@ -64,20 +62,18 @@ const WhatsAppChats = () => {
       if (isConnected) {
         await getChats();
         toast("Conversas atualizadas", {
-          description: "Suas conversas do WhatsApp foram atualizadas.",
+          description: "Suas conversas do WhatsApp foram atualizadas."
         });
       } else {
         toast("WhatsApp não conectado", {
-          description: "Reconecte seu WhatsApp para ver as conversas.",
-          variant: "destructive",
+          description: "Reconecte seu WhatsApp para ver as conversas."
         });
         navigate("/whatsapp");
       }
     } catch (error) {
       console.error("Error refreshing chats:", error);
       toast("Erro ao atualizar conversas", {
-        description: "Ocorreu um erro ao atualizar suas conversas do WhatsApp.",
-        variant: "destructive",
+        description: "Ocorreu um erro ao atualizar suas conversas do WhatsApp."
       });
     } finally {
       setRefreshing(false);
@@ -179,7 +175,7 @@ const ChatCard: React.FC<{ chat: WhatsAppChat }> = ({ chat }) => {
   const handleChatClick = () => {
     // For future implementation - open chat details
     toast("Funcionalidade em desenvolvimento", {
-      description: "A visualização de mensagens estará disponível em breve.",
+      description: "A visualização de mensagens estará disponível em breve."
     });
   };
   
