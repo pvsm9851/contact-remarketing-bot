@@ -91,24 +91,30 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       console.log("Generating QR code for instance:", instanceName);
       
-      // Call the QR Code generation API
-      const response = await apiService.generateQRCode({ instance: instanceName });
-      console.log("QR Code response:", response);
+      // Call the QR Code generation API - now returns binary data directly
+      const binaryResponse = await apiService.generateQRCode({ 
+        instance: instanceName 
+      }, 'binary');
       
-      if (response && response.image) {
+      // Convert the binary to a data URL
+      if (binaryResponse) {
+        // Create a data URL from the binary response
+        const blob = new Blob([binaryResponse], { type: 'image/png' });
+        const qrCodeDataUrl = URL.createObjectURL(blob);
+        
         // Create a session object
         const newSession: WhatsAppSession = {
           session: instanceName,
           instanceName: instanceName,
           connected: false,
-          qrCode: response.image,
+          qrCode: qrCodeDataUrl,
         };
         
         // Save to state and localStorage
         setSession(newSession);
         localStorage.setItem("whatsapp_session", JSON.stringify(newSession));
         
-        return response.image;
+        return qrCodeDataUrl;
       } else {
         throw new Error("Failed to generate QR code");
       }

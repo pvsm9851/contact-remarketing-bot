@@ -44,8 +44,8 @@ export const apiService = {
     }
   },
   
-  // Generate QR Code
-  generateQRCode: async (instanceData: { instance: string }) => {
+  // Generate QR Code - now with option to return binary data
+  generateQRCode: async (instanceData: { instance: string }, responseType: 'json' | 'binary' = 'json') => {
     try {
       const response = await fetch(buildWebhookUrl(WEBHOOKS.QRCODE_GENERATE), {
         method: "POST",
@@ -59,7 +59,12 @@ export const apiService = {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       
-      return await response.json();
+      // Return binary data or JSON based on responseType
+      if (responseType === 'binary') {
+        return await response.arrayBuffer();
+      } else {
+        return await response.json();
+      }
     } catch (error) {
       console.error("Error generating QR code:", error);
       throw error;
@@ -134,4 +139,3 @@ export const apiService = {
     }
   },
 };
-

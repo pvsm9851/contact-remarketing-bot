@@ -22,6 +22,11 @@ const WhatsAppConnect = () => {
   }, [session, navigate]);
 
   const handleGenerateQRCode = async () => {
+    // Clear existing QR code while loading
+    if (qrCode) {
+      setQrCode(null);
+    }
+    
     const code = await generateQRCode();
     if (code) {
       setQrCode(code);
