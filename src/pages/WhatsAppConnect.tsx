@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useWhatsApp } from "@/contexts/WhatsAppContext";
+import ContextDebug from "@/components/ContextDebug";
 
 const WhatsAppConnect = () => {
   const { session, isLoading, error, generateQRCode, checkConnection } = useWhatsApp();
@@ -128,6 +129,8 @@ const WhatsAppConnect = () => {
           </div>
         </div>
       </main>
+      
+      {process.env.NODE_ENV === 'development' && <ContextDebug />}
     </div>
   );
 };

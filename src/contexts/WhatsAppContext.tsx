@@ -20,6 +20,7 @@ interface WhatsAppContextType {
   sendMessage: (phone: string, message: string) => Promise<boolean>;
 }
 
+// Make sure the Context is properly initialized with undefined as default
 const WhatsAppContext = createContext<WhatsAppContextType | undefined>(undefined);
 
 export const useWhatsApp = () => {
