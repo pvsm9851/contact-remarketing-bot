@@ -246,24 +246,38 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return false;
     }
 
+    setIsLoading(true);
     try {
-      // For demonstration purposes only
       console.log(`Sending message to ${phone}: ${message}`);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Extract number from remoteJid if needed (removing the @s.whatsapp.net part)
+      const phoneNumber = phone.includes('@') ? phone.split('@')[0] : phone;
       
-      toast("Mensagem enviada", {
-        description: "Sua mensagem foi enviada com sucesso."
+      // Call the API to send message
+      const response = await apiService.sendMessage({
+        instance: session.instanceName,
+        remoteJid: phoneNumber,
+        message: message
       });
       
-      return true;
+      console.log("Send message response:", response);
+      
+      if (response && response.status === "send") {
+        toast("Mensagem enviada", {
+          description: "Sua mensagem foi enviada com sucesso."
+        });
+        return true;
+      } else {
+        throw new Error("Failed to send message");
+      }
     } catch (err) {
       console.error("Error sending message:", err);
       toast("Erro ao enviar mensagem", {
         description: "Ocorreu um erro ao enviar sua mensagem."
       });
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 

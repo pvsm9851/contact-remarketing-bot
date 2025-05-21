@@ -10,12 +10,17 @@ import { WhatsAppChat } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, MessageCircle } from "lucide-react";
+import { Loader2, MessageCircle, Send } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const WhatsAppChats = () => {
-  const { session, chats, isLoading, error, getChats, checkConnection } = useWhatsApp();
+  const { session, chats, isLoading, error, getChats, checkConnection, sendMessage } = useWhatsApp();
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedChat, setSelectedChat] = useState<WhatsAppChat | null>(null);
+  const [messageText, setMessageText] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
     const checkWhatsAppConnection = async () => {
@@ -77,6 +82,21 @@ const WhatsAppChats = () => {
       });
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!selectedChat || !messageText.trim()) return;
+    
+    setSendingMessage(true);
+    try {
+      const success = await sendMessage(selectedChat.remoteJid, messageText);
+      if (success) {
+        setMessageText("");
+        setSelectedChat(null);
+      }
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -142,17 +162,79 @@ const WhatsAppChats = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {chats.map((chat) => (
-              <ChatCard key={chat.id} chat={chat} />
+              <ChatCard 
+                key={chat.id} 
+                chat={chat} 
+                onSendMessage={() => setSelectedChat(chat)} 
+              />
             ))}
           </div>
         )}
       </main>
+
+      {/* Send Message Dialog */}
+      <Dialog open={!!selectedChat} onOpenChange={(open) => !open && setSelectedChat(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar mensagem</DialogTitle>
+            <DialogDescription>
+              {selectedChat && `Para: ${selectedChat.pushName}`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {selectedChat && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
+                <Avatar>
+                  <AvatarImage src={selectedChat.profilePicUrl || undefined} alt={selectedChat.pushName} />
+                  <AvatarFallback className="bg-blue-100 text-blue-700">
+                    {getInitials(selectedChat.pushName)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{selectedChat.pushName}</p>
+                  <p className="text-sm text-gray-500">{selectedChat.remoteJid.split("@")[0]}</p>
+                </div>
+              </div>
+            )}
+            
+            <Textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Digite sua mensagem aqui..."
+              className="min-h-[120px]"
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSelectedChat(null)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              type="button"
+              onClick={handleSendMessage}
+              disabled={!messageText.trim() || sendingMessage}
+              className="gap-2"
+            >
+              {sendingMessage && <Loader2 className="h-4 w-4 animate-spin" />}
+              {sendingMessage ? "Enviando..." : "Enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-// Separate Chat Card component
-const ChatCard: React.FC<{ chat: WhatsAppChat }> = ({ chat }) => {
+// Chat Card component
+const ChatCard: React.FC<{ 
+  chat: WhatsAppChat;
+  onSendMessage: () => void;
+}> = ({ chat, onSendMessage }) => {
   const isGroup = chat.remoteJid.includes("@g.us");
   
   const formatDate = (dateString: string) => {
@@ -171,19 +253,9 @@ const ChatCard: React.FC<{ chat: WhatsAppChat }> = ({ chat }) => {
       .toUpperCase()
       .substring(0, 2);
   };
-
-  const handleChatClick = () => {
-    // For future implementation - open chat details
-    toast("Funcionalidade em desenvolvimento", {
-      description: "A visualização de mensagens estará disponível em breve."
-    });
-  };
   
   return (
-    <Card 
-      className="hover:border-primary/50 transition-colors cursor-pointer"
-      onClick={handleChatClick}
-    >
+    <Card className="hover:border-primary/50 transition-colors">
       <CardHeader className="pb-2">
         <div className="flex items-center space-x-3">
           <Avatar className={isGroup ? "bg-green-100" : "bg-blue-100"}>
@@ -215,8 +287,8 @@ const ChatCard: React.FC<{ chat: WhatsAppChat }> = ({ chat }) => {
         </p>
       </CardContent>
       
-      <CardFooter className="pt-0">
-        <div className="w-full">
+      <CardFooter className="pt-0 flex justify-between items-center">
+        <div>
           {chat.windowActive ? (
             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
               Janela de contato ativa
@@ -227,9 +299,22 @@ const ChatCard: React.FC<{ chat: WhatsAppChat }> = ({ chat }) => {
             </span>
           )}
         </div>
+        
+        <Button 
+          size="sm" 
+          variant="ghost" 
+          className="h-8 w-8 p-0" 
+          onClick={(e) => {
+            e.stopPropagation();
+            onSendMessage();
+          }}
+        >
+          <Send size={16} className="text-primary" />
+        </Button>
       </CardFooter>
     </Card>
   );
 };
 
 export default WhatsAppChats;
+

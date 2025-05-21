@@ -4,7 +4,7 @@
  */
 
 // Base URLs
-const N8N_WEBHOOK_BASE_URL = "https://webhook.mavicmkt.com.br/webhook";
+const N8N_WEBHOOK_BASE_URL = "https://editor.mavicmkt.com.br/webhook-test";
 
 // Webhook IDs 
 const WEBHOOKS = {
@@ -12,6 +12,7 @@ const WEBHOOKS = {
   QRCODE_GENERATE: "28bebbde-21e9-405d-be7f-e724638be60f",
   CHECK_CONNECTION: "b66aa268-0ce8-4e95-9d31-23e8fba992ea",
   GET_CHATS: "d2558660-69f3-470e-82af-1d57266790b8",
+  SEND_MESSAGE: "f26fffa6-0ac5-4e56-b88b-e043c055378a",
 };
 
 // Helper function to build webhook URL
@@ -102,17 +103,35 @@ export const apiService = {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       
-      // The GET_CHATS endpoint might not return JSON
-      // but we need to handle the response based on what we expect
-      try {
-        return await response.json();
-      } catch (e) {
-        // If it's not JSON, just return the status
-        return { status: "success" };
-      }
+      return await response.json();
     } catch (error) {
       console.error("Error getting chats:", error);
       throw error;
     }
   },
+  
+  // Send message
+  sendMessage: async (messageData: { instance: string, remoteJid: string, message: string }) => {
+    try {
+      console.log("Sending message data:", messageData);
+      
+      const response = await fetch(buildWebhookUrl(WEBHOOKS.SEND_MESSAGE), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(messageData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      throw error;
+    }
+  },
 };
+

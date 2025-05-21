@@ -10,7 +10,7 @@ import { useWhatsApp } from "@/contexts/WhatsAppContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, Upload, Download, MessageSquare } from "lucide-react";
+import { Send, Upload, Download, MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const templateCSV = `nome,telefone
@@ -22,6 +22,7 @@ const WhatsAppContacts = () => {
   const [fileInput, setFileInput] = useState<HTMLInputElement | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
+  const [sending, setSending] = useState(false);
   const navigate = useNavigate();
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,11 +56,18 @@ const WhatsAppContacts = () => {
       return;
     }
     
+    setSending(true);
     const contact = contacts.find(c => c.id === selectedContactId);
     if (contact) {
-      await sendMessage(contact.phone, message);
-      setMessage("");
-      setSelectedContactId(null);
+      try {
+        await sendMessage(contact.phone, message);
+        setMessage("");
+        setSelectedContactId(null);
+      } finally {
+        setSending(false);
+      }
+    } else {
+      setSending(false);
     }
   };
 
@@ -226,10 +234,18 @@ const WhatsAppContacts = () => {
                 </Button>
                 <Button 
                   onClick={handleSendMessage}
-                  disabled={!selectedContactId || !message.trim()}
+                  disabled={!selectedContactId || !message.trim() || sending}
                   className="gap-2"
                 >
-                  <Send size={16} /> Enviar Mensagem
+                  {sending ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} /> Enviar Mensagem
+                    </>
+                  )}
                 </Button>
               </CardFooter>
             </Card>
