@@ -44,14 +44,25 @@ const WhatsAppConnect = () => {
   const handleCheckConnection = async () => {
     setCheckingConnection(true);
     try {
+      console.log("Checking connection for instance:", session?.instanceName);
       const isConnected = await checkConnection();
+      console.log("Connection check response:", isConnected);
+      
       if (isConnected) {
+        toast.success("WhatsApp conectado", {
+          description: "Redirecionando para seus chats..."
+        });
         navigate("/chats");
       } else {
-        toast("WhatsApp não conectado", {
+        toast.error("WhatsApp não conectado", {
           description: "Escaneie o QR Code novamente com seu WhatsApp."
         });
       }
+    } catch (err) {
+      console.error("Connection check error:", err);
+      toast.error("Erro ao verificar conexão", {
+        description: "Ocorreu um erro ao verificar o status da conexão. Tente novamente."
+      });
     } finally {
       setCheckingConnection(false);
     }
@@ -128,6 +139,16 @@ const WhatsAppConnect = () => {
             </p>
           </div>
         </div>
+        
+        {/* Show debug information in development */}
+        {session && (
+          <div className="mt-8 max-w-2xl mx-auto">
+            <details className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+              <summary>Detalhes da sessão (Debug)</summary>
+              <pre className="whitespace-pre-wrap">{JSON.stringify(session, null, 2)}</pre>
+            </details>
+          </div>
+        )}
       </main>
       
       {process.env.NODE_ENV === 'development' && <ContextDebug />}

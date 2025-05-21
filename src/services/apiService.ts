@@ -71,15 +71,18 @@ export const apiService = {
     }
   },
   
-  // Check connection status
+  // Check connection status - Updated to use GET instead of POST based on the error message
   checkConnection: async (instanceData: { instance: string }) => {
     try {
-      const response = await fetch(buildWebhookUrl(WEBHOOKS.CHECK_CONNECTION), {
-        method: "POST",
+      // Build the URL with the instance as a query parameter for GET request
+      const url = `${buildWebhookUrl(WEBHOOKS.CHECK_CONNECTION)}?instance=${instanceData.instance}`;
+      console.log("Checking connection with URL:", url);
+      
+      const response = await fetch(url, {
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(instanceData),
       });
       
       if (!response.ok) {
