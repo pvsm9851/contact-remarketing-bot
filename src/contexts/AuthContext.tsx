@@ -1,9 +1,9 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AuthState, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import { apiService } from "@/services/apiService";
 
 interface AuthContextType {
   auth: AuthState;
@@ -136,29 +136,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log("Sending data to N8N webhook:", webhookData);
       
-      // Call the N8N webhook to create user
-      const response = await fetch("https://webhook.mavicmkt.com.br/webhook/5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(webhookData)
-      });
+      // Use the apiService to call the registerUser function
+      const response = await apiService.registerUser(webhookData);
       
       console.log("N8N response:", response);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to register user with N8N: ${response.status} ${response.statusText}`);
-      }
-
-      // Try to parse response
-      let responseData;
-      try {
-        responseData = await response.json();
-        console.log("N8N response data:", responseData);
-      } catch (error) {
-        console.warn("Could not parse response as JSON:", error);
-      }
       
       // Create a new user object
       const newUser: User = {
