@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -120,11 +121,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const id = crypto.randomUUID();
       const timestamp = new Date().toISOString();
       
-      // Create session ID
+      // Use a consistent session ID/instance name format
       const sessionTimestamp = Date.now();
       const instance = `session-${sessionTimestamp}`;
       
-      // Prepare data for N8N webhook
+      // Prepare data for N8N webhook with the consistent instance
       const webhookData = {
         id,
         created_at: timestamp,
@@ -148,6 +149,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         phone: "", // Keep empty string for compatibility with existing code
         name,
       };
+      
+      // Store the instance name in localStorage for later WhatsApp connection
+      localStorage.setItem("whatsapp_instance", instance);
       
       // Log the user in
       localStorage.setItem("user", JSON.stringify(newUser));

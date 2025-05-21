@@ -42,6 +42,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load session from localStorage on mount
   useEffect(() => {
     const storedSession = localStorage.getItem("whatsapp_session");
+    // Check for stored instance from registration
+    const storedInstance = localStorage.getItem("whatsapp_instance");
+    
     if (storedSession) {
       try {
         const parsedSession = JSON.parse(storedSession);
@@ -50,6 +53,17 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.error("Failed to parse stored WhatsApp session", e);
         localStorage.removeItem("whatsapp_session");
       }
+    } else if (storedInstance && auth.user) {
+      // If we have an instance from registration but no session yet
+      // create a placeholder session object
+      const newSession: WhatsAppSession = {
+        session: storedInstance,
+        instanceName: storedInstance,
+        connected: false,
+        qrCode: null,
+      };
+      setSession(newSession);
+      localStorage.setItem("whatsapp_session", JSON.stringify(newSession));
     }
     
     // Load demo contacts for now
@@ -58,7 +72,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       { id: '2', name: 'Maria Oliveira', phone: '5511988888888' },
       { id: '3', name: 'Carlos Pereira', phone: '5511977777777' },
     ]);
-  }, []);
+  }, [auth.user]);
 
   // Generate QR Code
   const generateQRCode = async (): Promise<string | null> => {
@@ -71,9 +85,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
 
     try {
-      // Get instance ID from user
-      const sessionTimestamp = Date.now();
-      const instanceName = `session-${sessionTimestamp}`;
+      // Use instance ID from stored registration data if available
+      const storedInstance = localStorage.getItem("whatsapp_instance");
+      const instanceName = storedInstance || `session-${Date.now()}`;
       
       console.log("Generating QR code for instance:", instanceName);
       
@@ -253,7 +267,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Extract number from remoteJid if needed (removing the @s.whatsapp.net part)
       const phoneNumber = phone.includes('@') ? phone.split('@')[0] : phone;
       
-      // Call the API to send message
+      // Call the API to send message using consistent instance name
       const response = await apiService.sendMessage({
         instance: session.instanceName,
         remoteJid: phoneNumber,
