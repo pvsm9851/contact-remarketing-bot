@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -10,20 +10,42 @@ import { useWhatsApp } from "@/contexts/WhatsAppContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Send, Upload, Download, MessageSquare, Loader2 } from "lucide-react";
+import { Send, Upload, Download, MessageSquare, Loader2, Check, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const templateCSV = `nome,telefone
 João Silva,5511999999999
 Maria Oliveira,5511988888888`;
 
 const WhatsAppContacts = () => {
-  const { contacts, loadingContacts, uploadContacts, sendMessage } = useWhatsApp();
+  const { 
+    contacts, 
+    selectedContacts,
+    loadingContacts, 
+    isLoading,
+    uploadContacts, 
+    sendMessage,
+    sendBulkMessages,
+    toggleContactSelection,
+    clearSelectedContacts,
+    selectAllContacts,
+    session
+  } = useWhatsApp();
+  
   const [fileInput, setFileInput] = useState<HTMLInputElement | null>(null);
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [message, setMessage] = useState<string>("");
-  const [sending, setSending] = useState(false);
   const navigate = useNavigate();
+  
+  // Check if WhatsApp is connected
+  useEffect(() => {
+    if (!session?.connected) {
+      toast.warning("WhatsApp não conectado", {
+        description: "Conecte seu WhatsApp primeiro para enviar mensagens."
+      });
+      navigate("/whatsapp");
+    }
+  }, [session, navigate]);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,26 +71,27 @@ const WhatsAppContacts = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!selectedContactId || !message.trim()) {
-      toast("Erro", {
-        description: "Selecione um contato e escreva uma mensagem."
+    if (selectedContacts.length === 0 || !message.trim()) {
+      toast.warning("Selecione contatos e escreva uma mensagem", {
+        description: "Você precisa selecionar pelo menos um contato e escrever uma mensagem."
       });
       return;
     }
     
-    setSending(true);
-    const contact = contacts.find(c => c.id === selectedContactId);
-    if (contact) {
-      try {
-        await sendMessage(contact.phone, message);
-        setMessage("");
-        setSelectedContactId(null);
-      } finally {
-        setSending(false);
-      }
-    } else {
-      setSending(false);
+    // Get the Contact objects for all selected contacts
+    const contactsToSend = contacts.filter(c => selectedContacts.includes(c.id));
+    
+    if (contactsToSend.length === 0) {
+      toast.error("Nenhum contato válido selecionado");
+      return;
     }
+    
+    // Send messages to all selected contacts
+    await sendBulkMessages(contactsToSend, message);
+    
+    // Reset message field after sending
+    setMessage("");
+    clearSelectedContacts();
   };
 
   return (
@@ -127,11 +150,31 @@ const WhatsAppContacts = () => {
             </Card>
             
             <Card>
-              <CardHeader>
-                <CardTitle>Seus Contatos</CardTitle>
-                <CardDescription>
-                  {contacts.length} contatos importados
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Seus Contatos</CardTitle>
+                  <CardDescription>
+                    {contacts.length} contatos importados
+                  </CardDescription>
+                </div>
+                {contacts.length > 0 && (
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={selectAllContacts}
+                    >
+                      Selecionar Todos
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={clearSelectedContacts}
+                    >
+                      Limpar Seleção
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {loadingContacts ? (
@@ -153,6 +196,9 @@ const WhatsAppContacts = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-[50px]">
+                            <span className="sr-only">Selecionar</span>
+                          </TableHead>
                           <TableHead>Nome</TableHead>
                           <TableHead>Telefone</TableHead>
                           <TableHead className="w-[100px]">Ações</TableHead>
@@ -162,18 +208,29 @@ const WhatsAppContacts = () => {
                         {contacts.map((contact) => (
                           <TableRow 
                             key={contact.id}
-                            className={selectedContactId === contact.id ? "bg-primary-50" : ""}
+                            className={selectedContacts.includes(contact.id) ? "bg-primary-50" : ""}
                           >
+                            <TableCell>
+                              <Checkbox 
+                                checked={selectedContacts.includes(contact.id)}
+                                onCheckedChange={() => toggleContactSelection(contact.id)}
+                                aria-label={`Selecionar ${contact.name}`}
+                              />
+                            </TableCell>
                             <TableCell className="font-medium">{contact.name}</TableCell>
                             <TableCell>{contact.phone}</TableCell>
                             <TableCell>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onClick={() => setSelectedContactId(contact.id)}
+                                onClick={() => toggleContactSelection(contact.id)}
                                 className="h-8 w-8 p-0"
                               >
-                                <Send size={16} className="text-primary" />
+                                {selectedContacts.includes(contact.id) ? (
+                                  <CheckCheck size={16} className="text-primary" />
+                                ) : (
+                                  <Send size={16} className="text-primary" />
+                                )}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -192,31 +249,43 @@ const WhatsAppContacts = () => {
               <CardHeader>
                 <CardTitle>Enviar Mensagem</CardTitle>
                 <CardDescription>
-                  {selectedContactId 
-                    ? `Enviando para: ${contacts.find(c => c.id === selectedContactId)?.name}`
-                    : "Selecione um contato para enviar mensagem"}
+                  {selectedContacts.length > 0 
+                    ? `Enviando para: ${selectedContacts.length} contatos selecionados`
+                    : "Selecione um ou mais contatos para enviar mensagem"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {selectedContactId && (
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-md">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        {contacts.find(c => c.id === selectedContactId)?.name.charAt(0).toUpperCase() || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{contacts.find(c => c.id === selectedContactId)?.name}</p>
-                      <p className="text-sm text-gray-500">{contacts.find(c => c.id === selectedContactId)?.phone}</p>
+                {selectedContacts.length > 0 && (
+                  <div className="p-3 bg-gray-50 rounded-md">
+                    <div className="flex items-center mb-2">
+                      <Check size={16} className="text-green-500 mr-2" />
+                      <p className="text-sm font-medium">{selectedContacts.length} contatos selecionados</p>
                     </div>
+                    {selectedContacts.length <= 5 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedContacts.map((contactId) => {
+                          const contact = contacts.find(c => c.id === contactId);
+                          return contact ? (
+                            <div key={contactId} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-100 rounded">
+                              {contact.name}
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                    {selectedContacts.length > 5 && (
+                      <p className="text-xs text-gray-500">
+                        {contacts.find(c => c.id === selectedContacts[0])?.name}, {contacts.find(c => c.id === selectedContacts[1])?.name} e mais {selectedContacts.length - 2} contatos
+                      </p>
+                    )}
                   </div>
                 )}
                 
                 <Textarea 
-                  placeholder={selectedContactId 
+                  placeholder={selectedContacts.length > 0 
                     ? "Digite sua mensagem aqui..." 
-                    : "Selecione um contato primeiro"}
-                  disabled={!selectedContactId}
+                    : "Selecione um ou mais contatos primeiro"}
+                  disabled={selectedContacts.length === 0}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="min-h-[150px]"
@@ -226,7 +295,7 @@ const WhatsAppContacts = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => {
-                    setSelectedContactId(null);
+                    clearSelectedContacts();
                     setMessage("");
                   }}
                 >
@@ -234,16 +303,16 @@ const WhatsAppContacts = () => {
                 </Button>
                 <Button 
                   onClick={handleSendMessage}
-                  disabled={!selectedContactId || !message.trim() || sending}
+                  disabled={selectedContacts.length === 0 || !message.trim() || isLoading}
                   className="gap-2"
                 >
-                  {sending ? (
+                  {isLoading ? (
                     <>
                       <Loader2 size={16} className="animate-spin" /> Enviando...
                     </>
                   ) : (
                     <>
-                      <Send size={16} /> Enviar Mensagem
+                      <Send size={16} /> Enviar Mensagem{selectedContacts.length > 1 ? "s" : ""}
                     </>
                   )}
                 </Button>

@@ -31,16 +31,7 @@ export interface WhatsAppSession {
   session: string;
   instanceName: string;
   connected: boolean;
-  qrCode?: string;
+  qrCode?: string | null;
 }
 
-export interface WhatsAppChat {
-  id: string;
-  remoteJid: string;
-  pushName: string;
-  profilePicUrl: string | null;
-  updatedAt: string;
-  windowStart: string;
-  windowExpires: string;
-  windowActive: boolean;
-}
+// Removed WhatsAppChat interface since we're not using chat functionality anymore

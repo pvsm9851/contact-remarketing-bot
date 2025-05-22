@@ -14,19 +14,16 @@ const WhatsAppConnect = () => {
   const [checkingConnection, setCheckingConnection] = useState(false);
   const navigate = useNavigate();
 
+  // If already connected, redirect to contacts page
   useEffect(() => {
     if (session?.connected) {
-      navigate("/chats");
-    } else if (session?.qrCode) {
-      setQrCode(session.qrCode);
+      navigate("/contatos");
     }
   }, [session, navigate]);
 
   const handleGenerateQRCode = async () => {
     // Clear existing QR code while loading
-    if (qrCode) {
-      setQrCode(null);
-    }
+    setQrCode(null);
     
     const code = await generateQRCode();
     if (code) {
@@ -50,9 +47,10 @@ const WhatsAppConnect = () => {
       
       if (isConnected) {
         toast.success("WhatsApp conectado", {
-          description: "Redirecionando para seus chats..."
+          description: "Redirecionando para seus contatos..."
         });
-        navigate("/chats");
+        // Redirect to contacts page instead of chats
+        navigate("/contatos");
       } else {
         toast.error("WhatsApp não conectado", {
           description: "Escaneie o QR Code novamente com seu WhatsApp."

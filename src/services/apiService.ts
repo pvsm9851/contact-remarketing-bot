@@ -11,7 +11,6 @@ const WEBHOOKS = {
   NEW_USER: "5c3cdd33-7a18-4b6a-b3ed-0b4e5a273c18",
   QRCODE_GENERATE: "28bebbde-21e9-405d-be7f-e724638be60f",
   CHECK_CONNECTION: "b66aa268-0ce8-4e95-9d31-23e8fba992ea",
-  GET_CHATS: "d2558660-69f3-470e-82af-1d57266790b8",
   SEND_MESSAGE: "f26fffa6-0ac5-4e56-b88b-e043c055378a",
 };
 
@@ -71,7 +70,7 @@ export const apiService = {
     }
   },
   
-  // Check connection status - Updated to use GET instead of POST based on the error message
+  // Check connection status - using GET with query parameters
   checkConnection: async (instanceData: { instance: string }) => {
     try {
       // Build the URL with the instance as a query parameter for GET request
@@ -92,28 +91,6 @@ export const apiService = {
       return await response.json();
     } catch (error) {
       console.error("Error checking connection:", error);
-      throw error;
-    }
-  },
-  
-  // Get chats
-  getChats: async (instanceData: { instance: string }) => {
-    try {
-      const response = await fetch(buildWebhookUrl(WEBHOOKS.GET_CHATS), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(instanceData),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error("Error getting chats:", error);
       throw error;
     }
   },
