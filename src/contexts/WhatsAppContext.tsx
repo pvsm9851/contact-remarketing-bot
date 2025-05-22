@@ -21,6 +21,7 @@ interface WhatsAppContextType {
   toggleContactSelection: (contactId: string) => void;
   clearSelectedContacts: () => void;
   selectAllContacts: () => void;
+  clearCache: () => void;
 }
 
 // Make sure the Context is properly initialized with undefined as default
@@ -123,6 +124,7 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Save to state and localStorage
         setSession(newSession);
         localStorage.setItem("whatsapp_session", JSON.stringify(newSession));
+        localStorage.setItem("whatsapp_instance", instanceName);
         
         return qrCodeDataUrl;
       } else {
@@ -189,6 +191,19 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Clear local storage cache
+  const clearCache = () => {
+    localStorage.removeItem("whatsapp_session");
+    localStorage.removeItem("whatsapp_contacts");
+    localStorage.removeItem("whatsapp_instance");
+    setSession(null);
+    setContacts([]);
+    setSelectedContacts([]);
+    toast.success("Cache limpo", {
+      description: "Todas as informações do WhatsApp foram removidas."
+    });
   };
 
   // Upload contacts
@@ -263,10 +278,18 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Extract number from remoteJid if needed (removing the @s.whatsapp.net part)
       const phoneNumber = phone.includes('@') ? phone.split('@')[0] : phone;
       
+      // Ensure we're handling scientific notation (convert to full number string)
+      let formattedPhone = phoneNumber;
+      if (phoneNumber.includes('E+')) {
+        formattedPhone = Number(phoneNumber).toString();
+      }
+      
+      console.log("Formatted phone for API call:", formattedPhone);
+      
       // Call the API to send message using consistent instance name
       const response = await apiService.sendMessage({
         instance: session.instanceName,
-        remoteJid: phoneNumber,
+        remoteJid: formattedPhone,
         message: message
       });
       
@@ -308,8 +331,11 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsLoading(true);
     
     try {
+      console.log("Starting bulk message sending to", contacts.length, "contacts");
+      
       for (const contact of contacts) {
         try {
+          console.log("Sending to", contact.name, "at", contact.phone);
           const sent = await sendMessage(contact.phone, message);
           if (sent) {
             results.success++;
@@ -395,7 +421,8 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         sendBulkMessages,
         toggleContactSelection,
         clearSelectedContacts,
-        selectAllContacts
+        selectAllContacts,
+        clearCache
       }}
     >
       {children}

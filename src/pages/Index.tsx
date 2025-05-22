@@ -1,139 +1,161 @@
 
-import { Link } from "react-router-dom";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Zap, Users, BarChart3, MessageCircle } from "lucide-react";
+import { Check, Send, Users, Shield, BarChart } from "lucide-react";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-white">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="font-bold text-xl text-brand-800">WhatsReMKT</div>
-          <div className="space-x-2">
-            <Button variant="outline" asChild>
-              <Link to="/login">Login</Link>
+    <div className="min-h-screen bg-gray-900 text-gray-100">
+      {/* Hero section */}
+      <header className="bg-gray-900 border-b border-gray-800 py-4 px-6">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex items-center">
+            <h1 className="text-2xl font-bold text-blue-500">Zenviax</h1>
+            <span className="ml-2 text-sm text-gray-400">Mensagens WhatsApp</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => navigate("/login")}
+              variant="outline"
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              Login
             </Button>
-            <Button asChild>
-              <Link to="/registro">Registrar</Link>
+            
+            <Button
+              onClick={() => navigate("/registro")}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Criar Conta
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-brand-700 to-brand-900 text-white py-24">
+      {/* Hero banner */}
+      <section className="py-20 px-4 bg-gradient-to-b from-gray-900 to-gray-800">
+        <div className="container mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            Envie mensagens em massa pelo <span className="text-blue-500">WhatsApp</span>
+          </h1>
+          <p className="text-xl md:text-2xl text-gray-300 mb-10 max-w-3xl mx-auto">
+            Plataforma completa para envio de mensagens em massa para seus contatos
+            com facilidade e eficiência.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button 
+              onClick={() => navigate("/registro")} 
+              size="lg" 
+              className="bg-blue-600 hover:bg-blue-700 text-lg px-8"
+            >
+              Comece Agora
+            </Button>
+            <Button 
+              onClick={() => navigate("/whatsapp")} 
+              variant="outline" 
+              size="lg" 
+              className="border-gray-700 text-gray-200 hover:bg-gray-800 text-lg px-8"
+            >
+              Testar Grátis
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="py-16 bg-gray-800">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Potencialize seu marketing com o WhatsApp
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 opacity-90">
-              Conecte seu WhatsApp e envie mensagens de remarketing para seus contatos de forma simples e eficaz.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild className="bg-white text-brand-800 hover:bg-gray-100">
-                <Link to="/registro">Começar Agora</Link>
-              </Button>
-              <Button size="lg" variant="secondary" asChild className="bg-transparent border border-white text-white hover:bg-white/10">
-                <Link to="/login">Já tenho uma conta</Link>
-              </Button>
+          <h2 className="text-3xl font-bold text-center mb-12">Como Funciona</h2>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-gray-900 p-6 rounded-lg border border-gray-700">
+              <div className="w-12 h-12 bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                <span className="text-blue-500 text-xl font-bold">1</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Conecte seu WhatsApp</h3>
+              <p className="text-gray-400">
+                Escaneie o QR code com seu celular e conecte sua conta do WhatsApp à plataforma.
+              </p>
+            </div>
+            
+            <div className="bg-gray-900 p-6 rounded-lg border border-gray-700">
+              <div className="w-12 h-12 bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                <span className="text-blue-500 text-xl font-bold">2</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Importe seus contatos</h3>
+              <p className="text-gray-400">
+                Faça upload de um arquivo CSV com seus contatos ou adicione-os manualmente.
+              </p>
+            </div>
+            
+            <div className="bg-gray-900 p-6 rounded-lg border border-gray-700">
+              <div className="w-12 h-12 bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                <span className="text-blue-500 text-xl font-bold">3</span>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Envie mensagens</h3>
+              <p className="text-gray-400">
+                Escreva sua mensagem e envie para todos os seus contatos com apenas um clique.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Como funciona</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6 border rounded-lg">
-              <div className="w-16 h-16 bg-brand-100 text-brand-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-xl font-bold">1</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Registre-se</h3>
-              <p className="text-gray-600">Crie sua conta em minutos e configure seu perfil.</p>
-            </div>
-            <div className="text-center p-6 border rounded-lg">
-              <div className="w-16 h-16 bg-brand-100 text-brand-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-xl font-bold">2</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Conecte o WhatsApp</h3>
-              <p className="text-gray-600">Escaneie o código QR e conecte seu WhatsApp à plataforma.</p>
-            </div>
-            <div className="text-center p-6 border rounded-lg">
-              <div className="w-16 h-16 bg-brand-100 text-brand-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-xl font-bold">3</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Envie Mensagens</h3>
-              <p className="text-gray-600">Alcance seus contatos com mensagens personalizadas.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* Benefits Section */}
-      <section className="py-16 bg-gray-50">
+      {/* Benefits */}
+      <section className="py-16 bg-gray-900">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Benefícios</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <Zap className="h-10 w-10 text-brand-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Rápido e eficiente</h3>
-              <p className="text-gray-600">Alcance seus clientes de forma imediata com mensagens diretas.</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <Users className="h-10 w-10 text-brand-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Amplo alcance</h3>
-              <p className="text-gray-600">Atinja milhares de contatos com apenas alguns cliques.</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <BarChart3 className="h-10 w-10 text-brand-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Análise de desempenho</h3>
-              <p className="text-gray-600">Acompanhe o status de entrega e leitura das suas mensagens.</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <MessageCircle className="h-10 w-10 text-brand-600 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Personalização</h3>
-              <p className="text-gray-600">Crie mensagens personalizadas para diferentes grupos de contatos.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Account Creation */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-12">Criação de Conta</h2>
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <img src="https://via.placeholder.com/500x300" alt="Criação de conta" className="rounded-lg shadow-md" />
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="flex items-start">
+              <div className="mr-4 mt-1">
+                <Check className="h-6 w-6 text-blue-500" />
               </div>
               <div>
-                <h3 className="text-2xl font-semibold mb-4">Simples e rápido</h3>
-                <ul className="space-y-4">
-                  <li className="flex items-start">
-                    <CheckCircle className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Registro gratuito em menos de 1 minuto</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Não precisa de cartão de crédito para começar</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Interface intuitiva e fácil de usar</span>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-6 w-6 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                    <span>Suporte técnico disponível</span>
-                  </li>
-                </ul>
-                <Button asChild className="mt-6">
-                  <Link to="/registro">Criar minha conta</Link>
-                </Button>
+                <h3 className="text-xl font-semibold mb-2">Rápido e Eficiente</h3>
+                <p className="text-gray-400">
+                  Envie centenas de mensagens em minutos, sem precisar digitar uma a uma.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="mr-4 mt-1">
+                <Check className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Sem Bloqueios</h3>
+                <p className="text-gray-400">
+                  Nossa tecnologia evita bloqueios por envio em massa, mantendo sua conta segura.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="mr-4 mt-1">
+                <Check className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Gerenciamento de Contatos</h3>
+                <p className="text-gray-400">
+                  Organize seus contatos em grupos e segmente suas campanhas para melhor eficiência.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start">
+              <div className="mr-4 mt-1">
+                <Check className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold mb-2">Relatórios Detalhados</h3>
+                <p className="text-gray-400">
+                  Acompanhe o desempenho das suas campanhas com relatórios detalhados.
+                </p>
               </div>
             </div>
           </div>
@@ -141,166 +163,190 @@ const Index = () => {
       </section>
 
       {/* Pricing */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-gray-800">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-4">Planos</h2>
-          <p className="text-xl text-gray-600 text-center mb-12 max-w-2xl mx-auto">
-            Escolha o plano ideal para o seu negócio. Pague apenas pelo que usar.
+          <p className="text-center text-gray-400 mb-12 max-w-2xl mx-auto">
+            Escolha o plano ideal para suas necessidades. Pague apenas pelo que usar.
           </p>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Basic Plan */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-6 border-b">
-                <h3 className="text-2xl font-bold">Básico</h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold">R$0,05</span>
-                  <span className="ml-1 text-gray-500">/ mensagem</span>
+            <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+              <div className="p-6 border-b border-gray-700">
+                <h3 className="text-xl font-bold mb-2">Básico</h3>
+                <div className="flex items-baseline mb-4">
+                  <span className="text-3xl font-bold">R$ 0,05</span>
+                  <span className="text-gray-400 ml-1">/mensagem</span>
                 </div>
-                <p className="mt-4 text-gray-600">Para pequenas empresas que estão começando com marketing por WhatsApp</p>
+                <p className="text-gray-400">Ideal para pequenos negócios</p>
               </div>
               <div className="p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <ul className="space-y-4">
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                     <span>Até 1.000 mensagens/mês</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                     <span>Importação de contatos</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>Mensagens de texto</span>
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                     <span>Suporte por email</span>
                   </li>
                 </ul>
-                <Button variant="outline" className="w-full mt-6" asChild>
-                  <Link to="/registro">Começar Grátis</Link>
+                <Button 
+                  className="w-full mt-8 bg-blue-600 hover:bg-blue-700" 
+                  onClick={() => navigate("/registro")}
+                >
+                  Começar Agora
                 </Button>
               </div>
             </div>
             
-            {/* Pro Plan */}
-            <div className="bg-white rounded-lg shadow-md border-2 border-brand-500 relative overflow-hidden transform scale-105">
-              <div className="bg-brand-500 text-white py-1 px-4 absolute top-0 right-0 rounded-bl-lg text-sm font-semibold">
-                POPULAR
+            <div className="bg-gray-900 rounded-lg border border-blue-600 overflow-hidden transform scale-105 shadow-xl">
+              <div className="bg-blue-600 py-2 text-center">
+                <span className="text-sm font-semibold">MAIS POPULAR</span>
               </div>
-              <div className="p-6 border-b">
-                <h3 className="text-2xl font-bold">Profissional</h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold">R$0,03</span>
-                  <span className="ml-1 text-gray-500">/ mensagem</span>
+              <div className="p-6 border-b border-gray-700">
+                <h3 className="text-xl font-bold mb-2">Profissional</h3>
+                <div className="flex items-baseline mb-4">
+                  <span className="text-3xl font-bold">R$ 0,03</span>
+                  <span className="text-gray-400 ml-1">/mensagem</span>
                 </div>
-                <p className="mt-4 text-gray-600">Para empresas que precisam de mais recursos e volume de mensagens</p>
+                <p className="text-gray-400">Perfeito para empresas em crescimento</p>
               </div>
               <div className="p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <ul className="space-y-4">
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                     <span>Até 10.000 mensagens/mês</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>Importação de contatos</span>
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                    <span>Importação e gestão de contatos</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>Mensagens de texto e mídia</span>
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                    <span>Relatórios básicos</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                     <span>Suporte prioritário</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>Relatórios avançados</span>
-                  </li>
                 </ul>
-                <Button className="w-full mt-6" asChild>
-                  <Link to="/registro">Escolher Plano</Link>
+                <Button 
+                  className="w-full mt-8 bg-blue-600 hover:bg-blue-700" 
+                  onClick={() => navigate("/registro")}
+                >
+                  Começar Agora
                 </Button>
               </div>
             </div>
             
-            {/* Enterprise Plan */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-6 border-b">
-                <h3 className="text-2xl font-bold">Empresarial</h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold">R$0,02</span>
-                  <span className="ml-1 text-gray-500">/ mensagem</span>
+            <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+              <div className="p-6 border-b border-gray-700">
+                <h3 className="text-xl font-bold mb-2">Empresarial</h3>
+                <div className="flex items-baseline mb-4">
+                  <span className="text-3xl font-bold">R$ 0,02</span>
+                  <span className="text-gray-400 ml-1">/mensagem</span>
                 </div>
-                <p className="mt-4 text-gray-600">Para grandes empresas com alto volume de mensagens e necessidades personalizadas</p>
+                <p className="text-gray-400">Para grandes empresas e agências</p>
               </div>
               <div className="p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                <ul className="space-y-4">
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                     <span>Mensagens ilimitadas</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>Todas as funcionalidades</span>
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                    <span>Gestão avançada de contatos</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>API dedicada</span>
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                    <span>Relatórios avançados</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>Gerente de conta dedicado</span>
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                    <span>API para integração</span>
                   </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                    <span>Treinamento personalizado</span>
+                  <li className="flex">
+                    <Check className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                    <span>Suporte 24/7</span>
                   </li>
                 </ul>
-                <Button variant="outline" className="w-full mt-6" asChild>
-                  <Link to="/registro">Contato Comercial</Link>
+                <Button 
+                  className="w-full mt-8 bg-blue-600 hover:bg-blue-700" 
+                  onClick={() => navigate("/registro")}
+                >
+                  Falar com Vendas
                 </Button>
               </div>
             </div>
-          </div>
-          
-          <div className="text-center mt-12 text-gray-600">
-            <p>Todos os preços estão em Reais (R$). Cobranças realizadas mensalmente com base no uso.</p>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-white">
+      <section className="py-20 bg-gradient-to-b from-gray-800 to-gray-900">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Pronto para começar?</h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Registre-se hoje e comece a enviar mensagens de remarketing para seus contatos via WhatsApp.
+          <h2 className="text-3xl font-bold mb-6">Pronto para começar?</h2>
+          <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+            Comece a enviar mensagens em massa pelo WhatsApp hoje mesmo.
           </p>
-          <Button size="lg" asChild>
-            <Link to="/registro">Criar minha conta</Link>
+          <Button 
+            onClick={() => navigate("/registro")} 
+            size="lg" 
+            className="bg-blue-600 hover:bg-blue-700 text-lg px-8"
+          >
+            Criar Conta Grátis
           </Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-12 mt-auto">
+      <footer className="bg-gray-900 border-t border-gray-800 py-12">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <div className="font-bold text-xl">WhatsReMKT</div>
-              <p className="text-gray-400 mt-1">A plataforma ideal para seu remarketing via WhatsApp</p>
+          <div className="flex flex-col md:flex-row justify-between">
+            <div className="mb-8 md:mb-0">
+              <h2 className="text-2xl font-bold text-blue-500 mb-4">Zenviax</h2>
+              <p className="text-gray-400 max-w-xs">
+                Plataforma para envio de mensagens em massa pelo WhatsApp com facilidade e eficiência.
+              </p>
             </div>
-            <div className="flex gap-8">
-              <Link to="/" className="hover:text-brand-300">Home</Link>
-              <Link to="/login" className="hover:text-brand-300">Login</Link>
-              <Link to="/registro" className="hover:text-brand-300">Registrar</Link>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Plataforma</h3>
+                <ul className="space-y-2">
+                  <li><a href="#" className="text-gray-400 hover:text-gray-300">Como funciona</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-gray-300">Planos</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-gray-300">API</a></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Empresa</h3>
+                <ul className="space-y-2">
+                  <li><a href="#" className="text-gray-400 hover:text-gray-300">Sobre nós</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-gray-300">Blog</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-gray-300">Contato</a></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Legal</h3>
+                <ul className="space-y-2">
+                  <li><a href="#" className="text-gray-400 hover:text-gray-300">Termos de Serviço</a></li>
+                  <li><a href="#" className="text-gray-400 hover:text-gray-300">Política de Privacidade</a></li>
+                </ul>
+              </div>
             </div>
           </div>
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
-            &copy; {new Date().getFullYear()} WhatsReMKT. Todos os direitos reservados.
+          
+          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-500 text-sm">
+            &copy; {new Date().getFullYear()} Zenviax. Todos os direitos reservados.
           </div>
         </div>
       </footer>
