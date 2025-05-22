@@ -242,7 +242,10 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         throw new Error("Nenhum contato válido encontrado no arquivo");
       }
       
-      // Store contacts in state and localStorage
+      // Clear selected contacts when uploading new contacts
+      setSelectedContacts([]);
+      
+      // Replace contacts (not append)
       setContacts(parsedContacts);
       localStorage.setItem("whatsapp_contacts", JSON.stringify(parsedContacts));
       

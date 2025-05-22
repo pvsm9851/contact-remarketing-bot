@@ -104,7 +104,7 @@ const WhatsAppContacts = () => {
     document.body.removeChild(a);
     
     toast("Template baixado", {
-      description: "O template para importação de contatos foi baixado com sucesso."
+      description: "O template para importação de contatos foi baixado com sucesso. Certifique-se de que a coluna telefone esteja formatada como texto para evitar notação científica."
     });
   };
 
@@ -181,8 +181,11 @@ const WhatsAppContacts = () => {
                   <p>O arquivo CSV deve ter as colunas:</p>
                   <ul className="list-disc list-inside mt-1">
                     <li>nome: Nome do contato</li>
-                    <li>telefone: Número com DDD (ex: 5511999999999)</li>
+                    <li>telefone: Número com DDD (ex: 5511999999999) - formato texto</li>
                   </ul>
+                  <p className="mt-1 text-yellow-400">
+                    <strong>Importante:</strong> Formate a coluna telefone como texto para evitar notação científica!
+                  </p>
                 </div>
               </CardContent>
             </Card>

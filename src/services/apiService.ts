@@ -102,7 +102,8 @@ export const apiService = {
     try {
       console.log("Sending message data:", messageData);
       
-      const response = await fetch(`${N8N_WEBHOOK_TEST_BASE_URL}/${WEBHOOKS.SEND_MESSAGE}`, {
+      // Use the correct webhook URL (not the test one)
+      const response = await fetch(`${N8N_WEBHOOK_BASE_URL}/webhook/${WEBHOOKS.SEND_MESSAGE}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -114,7 +115,15 @@ export const apiService = {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       
-      return await response.json();
+      const result = await response.json();
+      console.log("Message send result:", result);
+      
+      // Return success based on the new status format
+      if (result && result.status === "send") {
+        return true;
+      } else {
+        throw new Error("Failed to send message: " + (result?.status || "unknown error"));
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       throw error;

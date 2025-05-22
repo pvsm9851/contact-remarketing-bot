@@ -3,10 +3,12 @@ import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useWhatsApp } from "@/contexts/WhatsAppContext";
-import { Trash2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Trash2, User } from "lucide-react";
 
 export const CustomHeader: React.FC = () => {
   const { clearCache } = useWhatsApp();
+  const { auth } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -44,6 +46,17 @@ export const CustomHeader: React.FC = () => {
           >
             Dashboard
           </Button>
+          
+          {auth.user && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-gray-300 hover:bg-gray-800"
+              onClick={() => navigate("/dashboard")}
+            >
+              <User size={18} />
+            </Button>
+          )}
         </div>
       </div>
     </header>
