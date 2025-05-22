@@ -30,11 +30,9 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <WhatsAppProvider>
+        <AuthProvider>
+          <WhatsAppProvider>
+            <BrowserRouter>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<Index />} />
@@ -90,9 +88,11 @@ const App: React.FC = () => {
                 {/* Catch All */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </WhatsAppProvider>
-          </AuthProvider>
-        </BrowserRouter>
+            </BrowserRouter>
+            <Toaster />
+            <Sonner />
+          </WhatsAppProvider>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
