@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -17,6 +16,32 @@ import { Checkbox } from "@/components/ui/checkbox";
 const templateCSV = `nome,telefone
 João Silva,5511999999999
 Maria Oliveira,5511988888888`;
+
+// Function to format phone numbers
+const formatPhoneNumber = (phone: string): string => {
+  // Remove any non-digit characters
+  const digits = phone.replace(/\D/g, '');
+  
+  // Check if it starts with country code (e.g., 55 for Brazil)
+  if (digits.startsWith('55') && digits.length >= 12) {
+    const countryCode = digits.substring(0, 2);
+    const areaCode = digits.substring(2, 4);
+    const firstPart = digits.substring(4, 9);
+    const secondPart = digits.substring(9);
+    return `+${countryCode} (${areaCode}) ${firstPart}-${secondPart}`;
+  } 
+  
+  // Handle numbers without country code (add Brazilian code)
+  else if (digits.length >= 10) {
+    const areaCode = digits.substring(0, 2);
+    const firstPart = digits.substring(2, 7);
+    const secondPart = digits.substring(7);
+    return `+55 (${areaCode}) ${firstPart}-${secondPart}`;
+  }
+  
+  // Return original if we can't format it
+  return phone;
+};
 
 const WhatsAppContacts = () => {
   const { 
@@ -218,7 +243,7 @@ const WhatsAppContacts = () => {
                               />
                             </TableCell>
                             <TableCell className="font-medium">{contact.name}</TableCell>
-                            <TableCell>{contact.phone}</TableCell>
+                            <TableCell>{formatPhoneNumber(contact.phone)}</TableCell>
                             <TableCell>
                               <Button 
                                 variant="ghost" 

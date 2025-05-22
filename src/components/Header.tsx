@@ -1,75 +1,78 @@
 
-import { useAuth } from "@/contexts/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
-  DropdownMenu,
-  DropdownMenuContent,
+  DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { User, LogOut, Settings, Trash2 } from "lucide-react";
 
 export function Header() {
-  const { auth, logout } = useAuth();
-  
+  const { auth, logout, clearCache } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <header className="border-b bg-white">
-      <div className="flex h-16 items-center px-4 md:px-6">
-        <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
-          <span className="text-xl font-bold text-brand-800">WhatsReMKT</span>
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <Link to="/dashboard" className="font-bold text-xl text-brand-800">
+          WhatsReMKT
         </Link>
-        <nav className="ml-auto flex items-center gap-4 sm:gap-6">
-          <Link 
-            to="/dashboard"
-            className="text-sm font-medium hover:underline underline-offset-4"
-          >
-            Dashboard
-          </Link>
-          <Link 
-            to="/contatos"
-            className="text-sm font-medium hover:underline underline-offset-4"
-          >
-            Contatos
-          </Link>
-          <Link 
-            to="/mensagens"
-            className="text-sm font-medium hover:underline underline-offset-4"
-          >
-            Mensagens
-          </Link>
+
+        <div className="flex items-center space-x-4">
+          <nav className="hidden md:flex items-center space-x-4">
+            <Link 
+              to="/dashboard" 
+              className="text-gray-600 hover:text-brand-600 transition"
+            >
+              Dashboard
+            </Link>
+            <Link 
+              to="/whatsapp" 
+              className="text-gray-600 hover:text-brand-600 transition"
+            >
+              WhatsApp
+            </Link>
+            <Link 
+              to="/contatos" 
+              className="text-gray-600 hover:text-brand-600 transition"
+            >
+              Contatos
+            </Link>
+          </nav>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback className="bg-brand-100 text-brand-800">
-                    {auth.user?.name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+              <Button variant="outline" size="sm" className="ml-auto flex items-center gap-2">
+                <User size={16} />
+                <span className="hidden sm:inline">{auth.user?.name || "Usuário"}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="p-2">
+                <p className="text-sm font-medium">{auth.user?.name || "Usuário"}</p>
+                <p className="text-xs text-gray-500 truncate">{auth.user?.email || ""}</p>
+              </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/perfil">Perfil</Link>
+              <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                <Settings size={16} className="mr-2" />
+                Configurações
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/whatsapp">Conexão WhatsApp</Link>
+              <DropdownMenuItem onClick={clearCache}>
+                <Trash2 size={16} className="mr-2" />
+                Limpar Cache
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={logout}
-                className="text-red-500 cursor-pointer"
-              >
+              <DropdownMenuItem onClick={logout}>
+                <LogOut size={16} className="mr-2" />
                 Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </nav>
+        </div>
       </div>
     </header>
   );

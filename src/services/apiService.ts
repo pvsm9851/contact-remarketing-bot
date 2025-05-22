@@ -4,7 +4,8 @@
  */
 
 // Base URLs
-const N8N_WEBHOOK_BASE_URL = "https://editor.mavicmkt.com.br/webhook-test";
+const N8N_WEBHOOK_BASE_URL = "https://editor.mavicmkt.com.br";
+const N8N_WEBHOOK_TEST_BASE_URL = "https://editor.mavicmkt.com.br/webhook-test";
 
 // Webhook IDs 
 const WEBHOOKS = {
@@ -15,8 +16,9 @@ const WEBHOOKS = {
 };
 
 // Helper function to build webhook URL
-const buildWebhookUrl = (webhookId: string): string => {
-  return `${N8N_WEBHOOK_BASE_URL}/${webhookId}`;
+const buildWebhookUrl = (webhookId: string, isTest: boolean = false): string => {
+  const baseUrl = isTest ? N8N_WEBHOOK_TEST_BASE_URL : `${N8N_WEBHOOK_BASE_URL}/webhook`;
+  return `${baseUrl}/${webhookId}`;
 };
 
 // API methods
@@ -100,7 +102,7 @@ export const apiService = {
     try {
       console.log("Sending message data:", messageData);
       
-      const response = await fetch(buildWebhookUrl(WEBHOOKS.SEND_MESSAGE), {
+      const response = await fetch(buildWebhookUrl(WEBHOOKS.SEND_MESSAGE, true), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
