@@ -186,7 +186,7 @@ const WhatsAppConnect = () => {
             <ol className="list-decimal list-inside space-y-2 text-gray-700">
               <li>Clique no botão "Gerar QR Code"</li>
               <li>Abra o WhatsApp no seu celular</li>
-              <li>Toque em Menu (três pontos) > WhatsApp Web</li>
+              <li>Toque em Menu (três pontos) {'>'} WhatsApp Web</li>
               <li>Aponte a câmera para o QR Code</li>
               <li>Aguarde a conexão ser estabelecida</li>
               <li>Clique em "Verificar Conexão"</li>
