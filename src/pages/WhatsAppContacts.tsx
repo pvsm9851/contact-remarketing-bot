@@ -19,6 +19,19 @@ Maria Oliveira,5511988888888`;
 
 // Function to format phone numbers
 const formatPhoneNumber = (phone: string): string => {
+  if (!phone) return '';
+  
+  // Check if the phone number has been converted to scientific notation by Excel
+  if (phone.includes('E+') || phone.includes('e+')) {
+    try {
+      // Convert from scientific notation back to a full number string
+      return String(Number(phone).toFixed(0));
+    } catch (error) {
+      console.error("Error formatting phone number from scientific notation:", error);
+      return phone;
+    }
+  }
+  
   // Remove any non-digit characters
   const digits = phone.replace(/\D/g, '');
   
@@ -132,10 +145,10 @@ const WhatsAppContacts = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Left column - Upload and contacts list */}
           <div className="md:col-span-7">
-            <Card className="mb-6">
+            <Card className="bg-gray-800 border-gray-700 text-gray-100 mb-6">
               <CardHeader>
                 <CardTitle>Importar Contatos</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                   Faça upload de uma planilha CSV com seus contatos
                 </CardDescription>
               </CardHeader>
@@ -144,7 +157,7 @@ const WhatsAppContacts = () => {
                   <Button 
                     onClick={() => fileInput?.click()}
                     variant="outline"
-                    className="gap-2"
+                    className="gap-2 border-gray-700 text-gray-300 hover:bg-gray-700"
                   >
                     <Upload size={16} /> Importar Contatos
                   </Button>
@@ -164,7 +177,7 @@ const WhatsAppContacts = () => {
                   />
                 </div>
                 
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-400">
                   <p>O arquivo CSV deve ter as colunas:</p>
                   <ul className="list-disc list-inside mt-1">
                     <li>nome: Nome do contato</li>
@@ -174,11 +187,11 @@ const WhatsAppContacts = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-gray-800 border-gray-700 text-gray-100">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Seus Contatos</CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-gray-400">
                     {contacts.length} contatos importados
                   </CardDescription>
                 </div>
@@ -188,6 +201,7 @@ const WhatsAppContacts = () => {
                       variant="outline" 
                       size="sm" 
                       onClick={selectAllContacts}
+                      className="border-gray-700 text-gray-300 hover:bg-gray-700"
                     >
                       Selecionar Todos
                     </Button>
@@ -195,6 +209,7 @@ const WhatsAppContacts = () => {
                       variant="outline" 
                       size="sm" 
                       onClick={clearSelectedContacts}
+                      className="border-gray-700 text-gray-300 hover:bg-gray-700"
                     >
                       Limpar Seleção
                     </Button>
@@ -205,14 +220,14 @@ const WhatsAppContacts = () => {
                 {loadingContacts ? (
                   <div className="space-y-4">
                     {Array.from({ length: 3 }).map((_, i) => (
-                      <Skeleton key={i} className="h-12 w-full" />
+                      <Skeleton key={i} className="h-12 w-full bg-gray-700" />
                     ))}
                   </div>
                 ) : contacts.length === 0 ? (
                   <div className="text-center py-10">
                     <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-4 text-gray-500">Nenhum contato importado</p>
-                    <p className="text-sm text-gray-400 mt-2">
+                    <p className="mt-4 text-gray-400">Nenhum contato importado</p>
+                    <p className="text-sm text-gray-500 mt-2">
                       Importe contatos usando o botão acima
                     </p>
                   </div>
@@ -220,20 +235,20 @@ const WhatsAppContacts = () => {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[50px]">
+                        <TableRow className="border-gray-700">
+                          <TableHead className="w-[50px] text-gray-300">
                             <span className="sr-only">Selecionar</span>
                           </TableHead>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Telefone</TableHead>
-                          <TableHead className="w-[100px]">Ações</TableHead>
+                          <TableHead className="text-gray-300">Nome</TableHead>
+                          <TableHead className="text-gray-300">Telefone</TableHead>
+                          <TableHead className="w-[100px] text-gray-300">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {contacts.map((contact) => (
                           <TableRow 
                             key={contact.id}
-                            className={selectedContacts.includes(contact.id) ? "bg-primary-50" : ""}
+                            className={selectedContacts.includes(contact.id) ? "bg-gray-700 hover:bg-gray-700 border-gray-700" : "border-gray-700 hover:bg-gray-700"}
                           >
                             <TableCell>
                               <Checkbox 
@@ -249,7 +264,7 @@ const WhatsAppContacts = () => {
                                 variant="ghost" 
                                 size="sm"
                                 onClick={() => toggleContactSelection(contact.id)}
-                                className="h-8 w-8 p-0"
+                                className="h-8 w-8 p-0 hover:bg-gray-700"
                               >
                                 {selectedContacts.includes(contact.id) ? (
                                   <CheckCheck size={16} className="text-primary" />
@@ -270,10 +285,10 @@ const WhatsAppContacts = () => {
           
           {/* Right column - Messaging */}
           <div className="md:col-span-5">
-            <Card>
+            <Card className="bg-gray-800 border-gray-700 text-gray-100">
               <CardHeader>
                 <CardTitle>Enviar Mensagem</CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-400">
                   {selectedContacts.length > 0 
                     ? `Enviando para: ${selectedContacts.length} contatos selecionados`
                     : "Selecione um ou mais contatos para enviar mensagem"}
@@ -281,17 +296,17 @@ const WhatsAppContacts = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {selectedContacts.length > 0 && (
-                  <div className="p-3 bg-gray-50 rounded-md">
+                  <div className="p-3 bg-gray-700 rounded-md">
                     <div className="flex items-center mb-2">
                       <Check size={16} className="text-green-500 mr-2" />
-                      <p className="text-sm font-medium">{selectedContacts.length} contatos selecionados</p>
+                      <p className="text-sm font-medium text-gray-200">{selectedContacts.length} contatos selecionados</p>
                     </div>
                     {selectedContacts.length <= 5 && (
                       <div className="flex flex-wrap gap-2">
                         {selectedContacts.map((contactId) => {
                           const contact = contacts.find(c => c.id === contactId);
                           return contact ? (
-                            <div key={contactId} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-100 rounded">
+                            <div key={contactId} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-600 rounded text-gray-200">
                               {contact.name}
                             </div>
                           ) : null;
@@ -299,7 +314,7 @@ const WhatsAppContacts = () => {
                       </div>
                     )}
                     {selectedContacts.length > 5 && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-300">
                         {contacts.find(c => c.id === selectedContacts[0])?.name}, {contacts.find(c => c.id === selectedContacts[1])?.name} e mais {selectedContacts.length - 2} contatos
                       </p>
                     )}
@@ -313,7 +328,7 @@ const WhatsAppContacts = () => {
                   disabled={selectedContacts.length === 0}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="min-h-[150px]"
+                  className="min-h-[150px] bg-gray-700 border-gray-600 text-gray-200 placeholder:text-gray-400"
                 />
               </CardContent>
               <CardFooter className="flex justify-between">
@@ -323,6 +338,7 @@ const WhatsAppContacts = () => {
                     clearSelectedContacts();
                     setMessage("");
                   }}
+                  className="border-gray-700 text-gray-300 hover:bg-gray-700"
                 >
                   Cancelar
                 </Button>

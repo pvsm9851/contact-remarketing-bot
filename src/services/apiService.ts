@@ -97,13 +97,12 @@ export const apiService = {
     }
   },
   
-  // Send message - now properly using the webhook-test URL for SEND_MESSAGE webhook
+  // Send message - using the updated webhook URL
   sendMessage: async (messageData: { instance: string, remoteJid: string, message: string }) => {
     try {
       console.log("Sending message data:", messageData);
       
-      // Make sure we're using the correct webhook URL for sending messages
-      const response = await fetch(buildWebhookUrl(WEBHOOKS.SEND_MESSAGE, true), {
+      const response = await fetch(`${N8N_WEBHOOK_TEST_BASE_URL}/${WEBHOOKS.SEND_MESSAGE}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

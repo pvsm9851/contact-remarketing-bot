@@ -14,7 +14,6 @@ export const CustomHeader: React.FC = () => {
       <div className="container mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center">
           <h1 className="text-2xl font-bold text-blue-500">Zenviax</h1>
-          <span className="ml-2 text-sm text-gray-400">Mensagens WhatsApp</span>
         </Link>
 
         <div className="flex items-center gap-4">
