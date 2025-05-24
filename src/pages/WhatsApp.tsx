@@ -1,35 +1,66 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomHeader } from "@/components/CustomHeader";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { useWhatsApp } from "@/contexts/WhatsAppContext";
 import { Loader2, QrCode, RefreshCw, Send, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import RedirectIfWhatsAppConnected from "@/components/RedirectIfWhatsAppConnected";
 
-const WhatsAppConnect: React.FC = () => {
+const WhatsApp: React.FC = () => {
+  const { auth } = useAuth();
   const { session, isLoading, error, generateQRCode, checkConnection } = useWhatsApp();
   const navigate = useNavigate();
   const [checkingStatus, setCheckingStatus] = useState(false);
-  
+
+  // Verifica a conexão ao montar o componente
+  useEffect(() => {
+    const verifyInitialConnection = async () => {
+      if (!auth.user?.instance) {
+        console.error("Instância do usuário não encontrada");
+        toast.error("Erro de configuração", {
+          description: "Instância do WhatsApp não encontrada. Entre em contato com o suporte."
+        });
+        return;
+      }
+
+      console.log("Verificando conexão inicial para instância:", auth.user.instance);
+      
+      // Verifica a conexão primeiro
+      const isConnected = await checkConnection();
+      console.log("Estado da conexão:", isConnected);
+
+      if (isConnected) {
+        console.log("Instância já está conectada, redirecionando para contatos");
+        toast.info("WhatsApp já está conectado", {
+          description: "Você será redirecionado para a página de contatos."
+        });
+        navigate("/contatos");
+        return;
+      }
+    };
+
+    verifyInitialConnection();
+  }, [auth.user]);
+
   const handleCheckConnection = async () => {
     setCheckingStatus(true);
     try {
+      console.log("Verificando conexão manualmente");
       const isConnected = await checkConnection();
-      
       if (isConnected) {
-        toast.success("WhatsApp conectado!", {
-          description: "Seu WhatsApp está conectado com sucesso.",
-        });
+        console.log("Conexão verificada manualmente, redirecionando para contatos");
         navigate("/contatos");
       } else {
+        console.log("Não está conectado, permanecendo na página");
         toast.error("WhatsApp não conectado", {
           description: "Por favor, escaneie o QR code para conectar.",
         });
       }
     } catch (error) {
-      console.error("Failed to check connection:", error);
+      console.error("Erro ao verificar conexão:", error);
       toast.error("Erro ao verificar conexão", {
         description: "Houve um problema ao verificar o status da conexão.",
       });
@@ -37,7 +68,7 @@ const WhatsAppConnect: React.FC = () => {
       setCheckingStatus(false);
     }
   };
-  
+
   const handleGenerateQRCode = async () => {
     await generateQRCode();
   };
@@ -219,4 +250,4 @@ const WhatsAppConnect: React.FC = () => {
   );
 };
 
-export default WhatsAppConnect;
+export default WhatsApp; 

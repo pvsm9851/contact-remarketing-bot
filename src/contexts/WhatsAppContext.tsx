@@ -1,13 +1,19 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "./AuthContext";
 import { WhatsAppSession, Contact } from "@/types";
 import { apiService } from "@/services/apiService";
+import { contactsService } from "@/services/contactsService";
+import type { Database } from "@/integrations/supabase/types";
+import { notify } from '@/services/notification';
+import { supabase } from '@/integrations/supabase/client';
+
+type ContactInsert = Database["public"]["Tables"]["contacts"]["Insert"];
 
 interface WhatsAppContextType {
   session: WhatsAppSession | null;
   contacts: Contact[];
+  importedContacts: ContactInsert[];
   selectedContacts: string[];
   isLoading: boolean;
   loadingContacts: boolean;
@@ -15,30 +21,26 @@ interface WhatsAppContextType {
   generateQRCode: () => Promise<string | null>;
   checkConnection: () => Promise<boolean>;
   disconnectSession: () => void;
-  uploadContacts: (file: File) => Promise<boolean>;
+  parseContactsFile: (file: File) => Promise<boolean>;
+  saveImportedContacts: () => Promise<boolean>;
+  clearImportedContacts: () => void;
   sendMessage: (phone: string, message: string) => Promise<boolean>;
-  sendBulkMessages: (contacts: Contact[], message: string) => Promise<{success: number, failed: number}>;
+  sendBulkMessages: (contacts: Contact[], message: string, intervalSeconds?: number, onProgress?: (progress: number) => void) => Promise<{success: number, failed: number}>;
   toggleContactSelection: (contactId: string) => void;
   clearSelectedContacts: () => void;
   selectAllContacts: () => void;
   clearCache: () => void;
+  editContact: (contactId: string, name: string, phone: string) => void;
+  deleteContact: (contactId: string) => Promise<void>;
 }
 
-// Make sure the Context is properly initialized with undefined as default
-const WhatsAppContext = createContext<WhatsAppContextType | undefined>(undefined);
+export const WhatsAppContext = createContext<WhatsAppContextType | null>(null);
 
-export const useWhatsApp = () => {
-  const context = useContext(WhatsAppContext);
-  if (context === undefined) {
-    throw new Error("useWhatsApp must be used within a WhatsAppProvider");
-  }
-  return context;
-};
-
-export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function WhatsAppProvider({ children }: { children: React.ReactNode }) {
   const { auth } = useAuth();
   const [session, setSession] = useState<WhatsAppSession | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [importedContacts, setImportedContacts] = useState<ContactInsert[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
@@ -47,43 +49,54 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Load session from localStorage on mount
   useEffect(() => {
     const storedSession = localStorage.getItem("whatsapp_session");
-    // Check for stored instance from registration
-    const storedInstance = localStorage.getItem("whatsapp_instance");
     
     if (storedSession) {
       try {
         const parsedSession = JSON.parse(storedSession);
-        setSession(parsedSession);
+        console.log("Loading stored session:", parsedSession);
+        
+        // Se a sessão estiver marcada como conectada, verifica a conexão
+        if (parsedSession.connected) {
+          setSession(parsedSession);
+          checkConnection().then(isConnected => {
+            if (!isConnected) {
+              // Se não estiver mais conectado, atualiza a sessão
+              const updatedSession = {
+                ...parsedSession,
+                connected: false
+              };
+              setSession(updatedSession);
+              localStorage.setItem("whatsapp_session", JSON.stringify(updatedSession));
+            }
+          });
+        } else {
+          setSession(parsedSession);
+        }
       } catch (e) {
         console.error("Failed to parse stored WhatsApp session", e);
         localStorage.removeItem("whatsapp_session");
       }
-    } else if (storedInstance && auth.user) {
-      // If we have an instance from registration but no session yet
-      // create a placeholder session object
-      const newSession: WhatsAppSession = {
-        session: storedInstance,
-        instanceName: storedInstance,
-        connected: false,
-        qrCode: null,
-      };
-      setSession(newSession);
-      localStorage.setItem("whatsapp_session", JSON.stringify(newSession));
     }
-    
-    // Load demo contacts from localStorage if available
-    const storedContacts = localStorage.getItem("whatsapp_contacts");
-    if (storedContacts) {
+  }, []);
+
+  // Load contacts from database when auth changes
+  useEffect(() => {
+    const loadContacts = async () => {
+      if (!auth.user?.id) return;
+
       try {
-        setContacts(JSON.parse(storedContacts));
-      } catch (e) {
-        console.error("Failed to parse stored contacts", e);
+        const contacts = await contactsService.getContacts();
+        setContacts(contacts);
+      } catch (error) {
+        console.error("Error loading contacts:", error);
+        toast.error("Erro ao carregar contatos", {
+          description: "Não foi possível carregar seus contatos. Tente novamente mais tarde."
+        });
       }
-    } else {
-      // Set empty contacts array if nothing stored
-      setContacts([]);
-    }
-  }, [auth.user]);
+    };
+
+    loadContacts();
+  }, [auth.user?.id]);
 
   // Generate QR Code
   const generateQRCode = async (): Promise<string | null> => {
@@ -96,43 +109,39 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
 
     try {
-      // Use instance ID from stored registration data if available
-      const storedInstance = localStorage.getItem("whatsapp_instance");
-      const instanceName = storedInstance || `session-${Date.now()}`;
+      // Limpa a sessão atual antes de gerar novo QR
+      setSession(prev => ({
+        ...prev,
+        connected: false,
+        qrCode: null
+      }));
       
-      console.log("Generating QR code for instance:", instanceName);
+      const response = await apiService.generateQRCode({ instance: auth.user.instance });
+      console.log('QR code response in context:', response);
       
-      // Call the QR Code generation API - returns binary data directly
-      const binaryResponse = await apiService.generateQRCode({ 
-        instance: instanceName 
-      }, 'binary');
-      
-      // Convert the binary to a data URL
-      if (binaryResponse) {
-        // Create a data URL from the binary response
-        const blob = new Blob([binaryResponse], { type: 'image/png' });
-        const qrCodeDataUrl = URL.createObjectURL(blob);
-        
-        // Create a session object
-        const newSession: WhatsAppSession = {
-          session: instanceName,
-          instanceName: instanceName,
+      if (response?.base64 && response.base64.startsWith('data:image')) {
+        const newSession = {
+          session: response.hash || '',
+          instanceName: auth.user.instance,
           connected: false,
-          qrCode: qrCodeDataUrl,
+          qrCode: response.base64
         };
-        
-        // Save to state and localStorage
         setSession(newSession);
         localStorage.setItem("whatsapp_session", JSON.stringify(newSession));
-        localStorage.setItem("whatsapp_instance", instanceName);
-        
-        return qrCodeDataUrl;
+        return response.base64;
       } else {
-        throw new Error("Failed to generate QR code");
+        console.error('Invalid QR code response:', response);
+        notify.error('Erro ao gerar QR Code', {
+          description: 'O formato do QR code recebido é inválido.'
+        });
+        return null;
       }
-    } catch (err) {
-      console.error("Error generating QR code:", err);
-      setError(err instanceof Error ? err.message : "Failed to generate QR code");
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      notify.error('Erro ao gerar QR Code', {
+        description: 'Por favor, tente novamente mais tarde.'
+      });
+      setError(error instanceof Error ? error.message : "Falha ao gerar QR code");
       return null;
     } finally {
       setIsLoading(false);
@@ -141,8 +150,9 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Check connection status
   const checkConnection = async (): Promise<boolean> => {
-    if (!session) {
-      setError("No active WhatsApp session");
+    if (!auth.user?.instance) {
+      console.log("Instância do usuário não encontrada");
+      setError("Instância do WhatsApp não encontrada");
       return false;
     }
 
@@ -150,43 +160,20 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
 
     try {
-      console.log("Checking connection for instance:", session.instanceName);
-      
-      const response = await apiService.checkConnection({ 
-        instance: session.instanceName 
+      const response = await apiService.checkConnection({ instance: auth.user.instance });
+      const connected = response.status === "connected";
+      setSession(prev => {
+        const newSession = { ...prev, connected };
+        localStorage.setItem("whatsapp_session", JSON.stringify(newSession));
+        return newSession;
       });
-      
-      console.log("Connection check response:", response);
-      
-      if (response && response.status) {
-        const isConnected = response.status === "connected";
-        
-        // Update session with connection status
-        const updatedSession = {
-          ...session,
-          connected: isConnected,
-        };
-        
-        setSession(updatedSession);
-        localStorage.setItem("whatsapp_session", JSON.stringify(updatedSession));
-        
-        if (isConnected) {
-          toast("WhatsApp conectado", {
-            description: "Seu WhatsApp está conectado com sucesso!"
-          });
-        } else {
-          toast("WhatsApp não conectado", {
-            description: "Por favor, escaneie o QR code novamente."
-          });
-        }
-        
-        return isConnected;
-      } else {
-        throw new Error("Invalid response from server");
-      }
-    } catch (err) {
-      console.error("Error checking connection:", err);
-      setError(err instanceof Error ? err.message : "Failed to check connection");
+      return connected;
+    } catch (error) {
+      console.error('Error checking connection:', error);
+      notify.error('Erro ao verificar conexão', {
+        description: 'Não foi possível verificar o status da conexão.'
+      });
+      setError(error instanceof Error ? error.message : "Falha ao verificar conexão");
       return false;
     } finally {
       setIsLoading(false);
@@ -196,8 +183,6 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Clear local storage cache
   const clearCache = () => {
     localStorage.removeItem("whatsapp_session");
-    localStorage.removeItem("whatsapp_contacts");
-    localStorage.removeItem("whatsapp_instance");
     setSession(null);
     setContacts([]);
     setSelectedContacts([]);
@@ -206,58 +191,39 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  // Upload contacts
-  const uploadContacts = async (file: File): Promise<boolean> => {
+  // Parse contacts from file
+  const parseContactsFile = async (file: File): Promise<boolean> => {
+    if (!auth.user?.id) {
+      toast.error("Usuário não autenticado", {
+        description: "Faça login para importar contatos."
+      });
+      return false;
+    }
+
     setLoadingContacts(true);
     try {
-      // Parse CSV file
-      const text = await file.text();
-      const lines = text.split('\n');
-      const headers = lines[0].split(',');
-      
-      const nameIndex = headers.findIndex(h => h.trim().toLowerCase() === 'nome');
-      const phoneIndex = headers.findIndex(h => h.trim().toLowerCase() === 'telefone');
-      
-      if (nameIndex === -1 || phoneIndex === -1) {
-        throw new Error("Formato inválido: o CSV deve conter colunas 'nome' e 'telefone'");
-      }
-      
-      const parsedContacts: Contact[] = [];
-      
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        const values = lines[i].split(',');
-        if (values.length >= Math.max(nameIndex, phoneIndex) + 1) {
-          const contact: Contact = {
-            id: `contact-${i}`,
-            name: values[nameIndex].trim(),
-            phone: values[phoneIndex].trim(),
-          };
-          parsedContacts.push(contact);
-        }
-      }
-      
-      if (parsedContacts.length === 0) {
-        throw new Error("Nenhum contato válido encontrado no arquivo");
-      }
-      
-      // Clear selected contacts when uploading new contacts
-      setSelectedContacts([]);
-      
-      // Replace contacts (not append)
-      setContacts(parsedContacts);
-      localStorage.setItem("whatsapp_contacts", JSON.stringify(parsedContacts));
-      
-      toast("Contatos importados", {
-        description: `${parsedContacts.length} contatos foram importados com sucesso.`
+      const parsedContacts = await contactsService.parseCSV(file);
+      const contacts = parsedContacts.map(contact => ({
+        ...contact,
+        user_id: auth.user.id
+      }));
+
+      const { error } = await supabase
+        .from('contacts')
+        .insert(contacts);
+
+      if (error) throw error;
+
+      notify.success('Contatos importados', {
+        description: `${contacts.length} contatos foram importados com sucesso.`
       });
-      
+
+      setImportedContacts(contacts);
       return true;
-    } catch (err) {
-      console.error("Error uploading contacts:", err);
-      toast.error("Erro ao importar contatos", {
-        description: err instanceof Error ? err.message : "Ocorreu um erro ao importar seus contatos."
+    } catch (error) {
+      console.error('Error parsing contacts:', error);
+      notify.error('Erro ao importar contatos', {
+        description: 'Verifique se o arquivo está no formato correto.'
       });
       return false;
     } finally {
@@ -265,63 +231,159 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Send message to a single contact
-  const sendMessage = async (phone: string, message: string): Promise<boolean> => {
-    if (!session || !session.connected) {
-      toast.error("WhatsApp não conectado", {
-        description: "Conecte seu WhatsApp antes de enviar mensagens."
+  // Save imported contacts to database
+  const saveImportedContacts = async (): Promise<boolean> => {
+    if (!auth.user?.id) {
+      toast.error("Usuário não autenticado", {
+        description: "Faça login para salvar os contatos."
       });
       return false;
     }
 
-    setIsLoading(true);
-    try {
-      console.log(`Sending message to ${phone}: ${message}`);
-      
-      // Extract number from remoteJid if needed (removing the @s.whatsapp.net part)
-      const phoneNumber = phone.includes('@') ? phone.split('@')[0] : phone;
-      
-      // Ensure we're handling scientific notation (convert to full number string)
-      let formattedPhone = phoneNumber;
-      if (phoneNumber.includes('E+')) {
-        formattedPhone = Number(phoneNumber).toString();
-      }
-      
-      console.log("Formatted phone for API call:", formattedPhone);
-      
-      // Call the API to send message using consistent instance name
-      const response = await apiService.sendMessage({
-        instance: session.instanceName,
-        remoteJid: formattedPhone,
-        message: message
-      });
-      
-      console.log("Send message response:", response);
-      
-      if (response && response.status === "send") {
-        toast.success("Mensagem enviada", {
-          description: "Sua mensagem foi enviada com sucesso."
-        });
-        return true;
-      } else {
-        throw new Error("Failed to send message");
-      }
-    } catch (err) {
-      console.error("Error sending message:", err);
-      toast.error("Erro ao enviar mensagem", {
-        description: "Ocorreu um erro ao enviar sua mensagem."
+    if (importedContacts.length === 0) {
+      toast.error("Nenhum contato para salvar", {
+        description: "Importe contatos primeiro antes de salvá-los."
       });
       return false;
-    } finally {
-      setIsLoading(false);
+    }
+
+    try {
+      // Cria um mapa de números de telefone existentes
+      const existingPhones = new Map(
+        contacts.map(contact => [contact.phone, { id: contact.id, name: contact.name }])
+      );
+
+      // Separa contatos novos e atualizações
+      const newContacts: ContactInsert[] = [];
+      const updates: { id: string; name: string }[] = [];
+
+      importedContacts.forEach(contact => {
+        const existing = existingPhones.get(contact.phone);
+        if (existing) {
+          // Se o nome for diferente, adiciona à lista de atualizações
+          if (existing.name !== contact.name) {
+            updates.push({ id: existing.id, name: contact.name });
+          }
+        } else {
+          newContacts.push(contact);
+        }
+      });
+
+      // Processa as atualizações
+      if (updates.length > 0) {
+        for (const update of updates) {
+          await contactsService.updateContact(update.id, { name: update.name });
+        }
+      }
+
+      // Salva os novos contatos
+      if (newContacts.length > 0) {
+        const savedContacts = await contactsService.createBulkContacts(newContacts);
+        setContacts(prevContacts => [...prevContacts, ...savedContacts]);
+      }
+
+      // Limpa os contatos importados
+      setImportedContacts([]);
+      
+      // Mostra mensagem de sucesso
+      toast.success("Contatos processados", {
+        description: `${newContacts.length} novos contatos salvos e ${updates.length} contatos atualizados.`
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error saving contacts:", error);
+      toast.error("Erro ao salvar contatos", {
+        description: "Não foi possível salvar os contatos. Tente novamente mais tarde."
+      });
+      return false;
+    }
+  };
+
+  // Clear imported contacts
+  const clearImportedContacts = () => {
+    setImportedContacts([]);
+    toast.success("Contatos importados descartados", {
+      description: "Os contatos importados foram descartados sem serem salvos."
+    });
+  };
+
+  // Send message to a single contact
+  const sendMessage = async (phone: string, message: string): Promise<boolean> => {
+    if (!auth.user?.instance) {
+      toast.error("WhatsApp não configurado", {
+        description: "Configuração da instância não encontrada."
+      });
+      return false;
+    }
+
+    try {
+      console.log(`Enviando mensagem para ${phone}: ${message}`);
+      
+      // Limpa o número de telefone
+      let formattedPhone = phone.replace(/\D/g, '');
+      
+      // Converte notação científica se necessário
+      if (formattedPhone.includes('E') || formattedPhone.includes('e')) {
+        formattedPhone = Number(formattedPhone).toFixed(0);
+      }
+      
+      // Valida o formato do número
+      if (!/^55\d{10,11}$/.test(formattedPhone)) {
+        console.error("Número inválido:", formattedPhone);
+        return false;
+      }
+      
+      console.log("Número formatado para API:", formattedPhone);
+      
+      // Call the API to send message using user's instance
+      const response = await apiService.sendMessage(
+        auth.user.instance,
+        formattedPhone,
+        message
+      );
+      
+      // A API retorna status "send" quando a mensagem é enviada com sucesso
+      if (response?.key?.remoteJid) {
+        console.log("Mensagem enviada com sucesso:", response);
+        return true;
+      } else {
+        console.error("Resposta inesperada da API:", response);
+        return false;
+      }
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+      return false;
+    }
+  };
+
+  // Edit contact
+  const editContact = async (contactId: string, name: string, phone: string) => {
+    try {
+      const updatedContact = await contactsService.updateContact(contactId, { name, phone });
+      setContacts(prevContacts => 
+        prevContacts.map(contact => 
+          contact.id === contactId ? updatedContact : contact
+        )
+      );
+    } catch (error) {
+      console.error("Error updating contact:", error);
+      toast.error("Erro ao atualizar contato", {
+        description: "Não foi possível atualizar o contato. Tente novamente mais tarde."
+      });
     }
   };
 
   // Send message to multiple contacts
-  const sendBulkMessages = async (contacts: Contact[], message: string): Promise<{success: number, failed: number}> => {
-    if (!session || !session.connected) {
-      toast.error("WhatsApp não conectado", {
-        description: "Conecte seu WhatsApp antes de enviar mensagens."
+  const sendBulkMessages = async (
+    contacts: Contact[], 
+    message: string, 
+    intervalSeconds: number = 10,
+    onProgress?: (progress: number) => void
+  ): Promise<{success: number, failed: number}> => {
+    if (!auth.user?.instance) {
+      toast.error("WhatsApp não configurado", {
+        description: "Configuração da instância não encontrada."
       });
       return { success: 0, failed: 0 };
     }
@@ -334,24 +396,35 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsLoading(true);
     
     try {
-      console.log("Starting bulk message sending to", contacts.length, "contacts");
+      console.log("Iniciando envio em massa para", contacts.length, "contatos");
+      console.log("Intervalo entre mensagens:", intervalSeconds, "segundos");
       
-      for (const contact of contacts) {
+      for (let i = 0; i < contacts.length; i++) {
+        const contact = contacts[i];
         try {
-          console.log("Sending to", contact.name, "at", contact.phone);
+          console.log("Enviando para", contact.name, "em", contact.phone);
           const sent = await sendMessage(contact.phone, message);
           if (sent) {
             results.success++;
+            console.log("Mensagem enviada com sucesso para", contact.name);
           } else {
             results.failed++;
+            console.log("Falha ao enviar mensagem para", contact.name);
           }
         } catch (err) {
-          console.error(`Failed to send message to ${contact.name}:`, err);
+          console.error(`Falha ao enviar mensagem para ${contact.name}:`, err);
           results.failed++;
         }
         
-        // Add a small delay between messages to prevent throttling
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Calcula e atualiza o progresso
+        const progress = ((i + 1) / contacts.length) * 100;
+        onProgress?.(progress);
+        
+        // Aguarda o intervalo especificado entre as mensagens
+        if (i < contacts.length - 1) {
+          console.log(`Aguardando ${intervalSeconds} segundos antes da próxima mensagem...`);
+          await new Promise(resolve => setTimeout(resolve, intervalSeconds * 1000));
+        }
       }
       
       const totalAttempted = results.success + results.failed;
@@ -372,13 +445,14 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       
       return results;
     } catch (err) {
-      console.error("Error in bulk message sending:", err);
+      console.error("Erro no envio em massa:", err);
       toast.error("Erro ao enviar mensagens em massa", {
         description: "Ocorreu um erro ao processar o envio de mensagens."
       });
       return { success: results.success, failed: results.failed };
     } finally {
       setIsLoading(false);
+      onProgress?.(100); // Garante que a barra de progresso chegue ao fim
     }
   };
 
@@ -398,7 +472,8 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const selectAllContacts = () => {
-    setSelectedContacts(contacts.map(contact => contact.id));
+    const allContactIds = contacts.map(contact => contact.id);
+    setSelectedContacts(allContactIds);
   };
 
   // Disconnect session
@@ -407,11 +482,26 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSession(null);
   };
 
+  // Delete contact
+  const deleteContact = async (contactId: string) => {
+    try {
+      await contactsService.deleteContact(contactId);
+      setContacts(prevContacts => prevContacts.filter(contact => contact.id !== contactId));
+      setSelectedContacts(prev => prev.filter(id => id !== contactId));
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      toast.error("Erro ao excluir contato", {
+        description: "Não foi possível excluir o contato. Tente novamente mais tarde."
+      });
+    }
+  };
+
   return (
     <WhatsAppContext.Provider
       value={{
         session,
         contacts,
+        importedContacts,
         selectedContacts,
         isLoading,
         loadingContacts,
@@ -419,16 +509,29 @@ export const WhatsAppProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         generateQRCode,
         checkConnection,
         disconnectSession,
-        uploadContacts,
+        parseContactsFile,
+        saveImportedContacts,
+        clearImportedContacts,
         sendMessage,
         sendBulkMessages,
         toggleContactSelection,
         clearSelectedContacts,
         selectAllContacts,
-        clearCache
+        clearCache,
+        editContact,
+        deleteContact
       }}
     >
       {children}
     </WhatsAppContext.Provider>
   );
-};
+}
+
+// Export the hook separately after the provider
+export function useWhatsApp() {
+  const context = useContext(WhatsAppContext);
+  if (context === undefined) {
+    throw new Error("useWhatsApp must be used within a WhatsAppProvider");
+  }
+  return context;
+}

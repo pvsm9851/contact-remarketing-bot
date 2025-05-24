@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,23 +24,23 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <div className="w-full max-w-md px-4">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-brand-800">WhatsReMKT</h1>
-          <p className="text-gray-600 mt-2">Plataforma de Remarketing pelo WhatsApp</p>
+          <h1 className="text-3xl font-bold text-gray-100">WhatsReMKT</h1>
+          <p className="text-gray-400 mt-2">Plataforma de Remarketing pelo WhatsApp</p>
         </div>
         
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle>Entrar</CardTitle>
-            <CardDescription>Digite seu e-mail e senha para acessar sua conta</CardDescription>
+            <CardTitle className="text-gray-100">Entrar</CardTitle>
+            <CardDescription className="text-gray-400">Digite seu e-mail e senha para acessar sua conta</CardDescription>
           </CardHeader>
           
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                <label htmlFor="email" className="text-sm font-medium text-gray-200">Email</label>
                 <Input
                   id="email"
                   type="email"
@@ -49,13 +48,14 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="bg-gray-700 border-gray-600 text-gray-100 placeholder:text-gray-400"
                 />
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-sm font-medium">Senha</label>
-                  <Link to="/esqueci-senha" className="text-sm text-brand-600 hover:text-brand-800">
+                  <label htmlFor="password" className="text-sm font-medium text-gray-200">Senha</label>
+                  <Link to="/esqueci-senha" className="text-sm text-blue-400 hover:text-blue-300">
                     Esqueceu a senha?
                   </Link>
                 </div>
@@ -66,6 +66,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  className="bg-gray-700 border-gray-600 text-gray-100 placeholder:text-gray-400"
                 />
               </div>
             </CardContent>
@@ -73,15 +74,15 @@ const Login = () => {
             <CardFooter className="flex-col space-y-4">
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-blue-600 hover:bg-blue-700"
                 disabled={isLoading}
               >
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
               
-              <p className="text-center text-sm">
+              <p className="text-center text-sm text-gray-400">
                 Não tem uma conta?{" "}
-                <Link to="/registro" className="text-brand-600 hover:text-brand-800 font-medium">
+                <Link to="/registro" className="text-blue-400 hover:text-blue-300 font-medium">
                   Registre-se
                 </Link>
               </p>

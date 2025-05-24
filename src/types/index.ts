@@ -1,9 +1,8 @@
-
 export interface User {
   id: string;
   email: string;
-  phone: string; // Keeping for compatibility
   name: string;
+  instance: string;
 }
 
 export interface AuthState {
@@ -12,11 +11,21 @@ export interface AuthState {
   isLoading: boolean;
 }
 
-export interface Contact {
+export interface Stats {
   id: string;
-  name: string;
-  phone: string;
-  lastContact?: string;
+  user_id: string;
+  total_messages_sent: number;
+  total_messages_failed: number;
+  created_at: string;
+}
+
+export interface StatsContextType {
+  stats: Stats | null;
+  isLoading: boolean;
+  incrementMessagesSent: (amount?: number) => Promise<void>;
+  incrementMessagesFailed: (amount?: number) => Promise<void>;
+  refreshStats: () => Promise<void>;
+  createNewStatsEntry: (updates: Partial<Stats>) => Promise<void>;
 }
 
 export interface Message {
@@ -34,4 +43,5 @@ export interface WhatsAppSession {
   qrCode?: string | null;
 }
 
-// Removed WhatsAppChat interface since we're not using chat functionality anymore
+// Re-export types from whatsapp.ts
+export * from './whatsapp';

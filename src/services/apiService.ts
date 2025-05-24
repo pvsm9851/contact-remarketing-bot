@@ -1,11 +1,14 @@
-
 /**
  * Service for handling API calls to N8N webhooks
  */
 
+import axios from "axios";
+
 // Base URLs
 const N8N_WEBHOOK_BASE_URL = "https://editor.mavicmkt.com.br";
 const N8N_WEBHOOK_TEST_BASE_URL = "https://editor.mavicmkt.com.br/webhook-test";
+const EVOLUTION_API_URL = "https://api.mavicmkt.com.br";
+const EVOLUTION_API_KEY = "c87ea0c8c68239cc4c7a001f960efbca";
 
 // Webhook IDs 
 const WEBHOOKS = {
@@ -21,112 +24,146 @@ const buildWebhookUrl = (webhookId: string, isTest: boolean = false): string => 
   return `${baseUrl}/${webhookId}`;
 };
 
+interface WhatsAppResponse {
+  status: string;
+  message?: string;
+}
+
+interface SendMessageParams {
+  instance: string;
+  remoteJid: string;
+  message: string;
+}
+
+interface CheckConnectionParams {
+  instance: string;
+}
+
+interface GenerateQRCodeParams {
+  instance: string;
+}
+
+interface CreateInstanceParams {
+  instanceName: string;
+  qrcode: boolean;
+  integration: string;
+}
+
+interface ConnectionState {
+  instance: {
+    instanceName: string;
+    state: string;
+  };
+}
+
+interface QRCodeResponse {
+  pairingCode: string | null;
+  code: string;
+  base64: string;
+  count: number;
+}
+
+interface CreateInstanceResponse {
+  hash: string;
+  instance: {
+    instanceName: string;
+    status: string;
+  };
+}
+
+interface SendMessageResponse {
+  key: {
+    id: string;
+    remoteJid: string;
+  };
+  status: string;
+}
+
+const api = axios.create({
+  baseURL: EVOLUTION_API_URL,
+  headers: {
+    "Content-Type": "application/json",
+    "apikey": EVOLUTION_API_KEY
+  }
+});
+
 // API methods
 export const apiService = {
+  // Create Evolution API Instance
+  async createInstance(instanceName: string): Promise<CreateInstanceResponse> {
+    try {
+      const response = await api.post("/instance/create", {
+        instanceName,
+        qrcode: true,
+        integration: "WHATSAPP-BAILEYS"
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error details:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers
+      });
+      throw error;
+    }
+  },
+
   // Register new user
-  registerUser: async (userData: any) => {
+  async registerUser(userData: any): Promise<any> {
+    const response = await api.post("/users/register", userData);
+    return response.data;
+  },
+  
+  // Generate QR Code
+  async generateQRCode(params: GenerateQRCodeParams): Promise<any> {
     try {
-      const response = await fetch(buildWebhookUrl(WEBHOOKS.NEW_USER), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
+      console.log('Requesting QR code for instance:', params.instance);
+      const response = await api.get(`/instance/connect/${params.instance}`);
+      console.log('QR code generation response:', response.data);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
+      // Se a instância estiver em estado connecting, vamos tentar desconectar primeiro
+      if (response.data?.instance?.state === 'connecting') {
+        console.log('Instance is in connecting state, trying to disconnect first');
+        await api.delete(`/instance/logout/${params.instance}`);
+        // Aguarda um momento e tenta gerar o QR novamente
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const retryResponse = await api.get(`/instance/connect/${params.instance}`);
+        console.log('QR code retry response:', retryResponse.data);
+        return retryResponse.data;
       }
       
-      return await response.json();
+      return response.data;
     } catch (error) {
-      console.error("Error registering user:", error);
+      console.error('Error generating QR code:', error);
       throw error;
     }
   },
   
-  // Generate QR Code - now with option to return binary data
-  generateQRCode: async (instanceData: { instance: string }, responseType: 'json' | 'binary' = 'json') => {
-    try {
-      const response = await fetch(buildWebhookUrl(WEBHOOKS.QRCODE_GENERATE), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(instanceData),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      // Return binary data or JSON based on responseType
-      if (responseType === 'binary') {
-        return await response.arrayBuffer();
-      } else {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error("Error generating QR code:", error);
-      throw error;
-    }
+  // Check connection status
+  async checkConnection(params: CheckConnectionParams): Promise<WhatsAppResponse> {
+    const response = await api.get(`/instance/connectionState/${params.instance}`);
+    console.log('Evolution API connection response:', response.data);
+    return {
+      status: response.data?.instance?.state === "open" ? "connected" : "disconnected"
+    };
   },
   
-  // Check connection status - using GET with query parameters
-  checkConnection: async (instanceData: { instance: string }) => {
-    try {
-      // Build the URL with the instance as a query parameter for GET request
-      const url = `${buildWebhookUrl(WEBHOOKS.CHECK_CONNECTION)}?instance=${instanceData.instance}`;
-      console.log("Checking connection with URL:", url);
-      
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error("Error checking connection:", error);
-      throw error;
-    }
+  // Send message
+  async sendMessage(instance: string, number: string, text: string): Promise<SendMessageResponse> {
+    const response = await api.post(`/message/sendText/${instance}`, {
+      number,
+      text
+    });
+    return response.data;
   },
-  
-  // Send message - using the updated webhook URL
-  sendMessage: async (messageData: { instance: string, remoteJid: string, message: string }) => {
-    try {
-      console.log("Sending message data:", messageData);
-      
-      // Use the correct webhook URL (not the test one)
-      const response = await fetch(`${N8N_WEBHOOK_BASE_URL}/webhook/${WEBHOOKS.SEND_MESSAGE}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(messageData),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log("Message send result:", result);
-      
-      // Return success based on the new status format
-      if (result && result.status === "send") {
-        return true;
-      } else {
-        throw new Error("Failed to send message: " + (result?.status || "unknown error"));
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      throw error;
-    }
+
+  async get<T>(endpoint: string): Promise<T> {
+    const response = await api.get<T>(endpoint);
+    return response.data;
   },
+
+  async post<T>(endpoint: string, data: any): Promise<T> {
+    const response = await api.post<T>(endpoint, data);
+    return response.data;
+  }
 };

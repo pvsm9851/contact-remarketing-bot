@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,91 +8,104 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // Contexts
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WhatsAppProvider } from "@/contexts/WhatsAppContext";
+import { StatsProvider } from "@/contexts/StatsContext";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 
 // Components
 import RequireAuth from "@/components/RequireAuth";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
+import RequireWhatsAppConnection from "@/components/RequireWhatsAppConnection";
+import PrivateRoute from "@/components/PrivateRoute";
 
 // Pages
-import Index from "./pages/Index";
+import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import WhatsAppConnect from "./pages/WhatsAppConnect";
-import WhatsAppContacts from "./pages/WhatsAppContacts";
+import WhatsApp from "./pages/WhatsApp";
+import Contacts from "./pages/Contacts";
+import Plans from "./pages/Plans";
 import NotFound from "./pages/NotFound";
 
-const App: React.FC = () => {
-  // Create a new QueryClient instance for each render to avoid sharing instances
-  const [queryClient] = useState(() => new QueryClient());
+const queryClient = new QueryClient();
 
+const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <SubscriptionProvider>
             <WhatsAppProvider>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Index />} />
-                <Route 
-                  path="/login" 
-                  element={
-                    <RedirectIfAuthenticated>
-                      <Login />
-                    </RedirectIfAuthenticated>
-                  } 
-                />
-                <Route 
-                  path="/registro" 
-                  element={
-                    <RedirectIfAuthenticated>
-                      <Register />
-                    </RedirectIfAuthenticated>
-                  } 
-                />
+              <StatsProvider>
+                <TooltipProvider>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/" element={<Home />} />
+                    <Route
+                      path="/login"
+                      element={
+                        <RedirectIfAuthenticated>
+                          <Login />
+                        </RedirectIfAuthenticated>
+                      }
+                    />
+                    <Route
+                      path="/register"
+                      element={
+                        <RedirectIfAuthenticated>
+                          <Register />
+                        </RedirectIfAuthenticated>
+                      }
+                    />
 
-                {/* Protected Routes */}
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <RequireAuth>
-                      <Dashboard />
-                    </RequireAuth>
-                  } 
-                />
-                <Route 
-                  path="/whatsapp" 
-                  element={
-                    <RequireAuth>
-                      <WhatsAppConnect />
-                    </RequireAuth>
-                  } 
-                />
-                <Route 
-                  path="/contatos" 
-                  element={
-                    <RequireAuth>
-                      <WhatsAppContacts />
-                    </RequireAuth>
-                  } 
-                />
+                    {/* Protected routes */}
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <PrivateRoute>
+                          <Dashboard />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/whatsapp"
+                      element={
+                        <PrivateRoute>
+                          <WhatsApp />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/contatos"
+                      element={
+                        <PrivateRoute>
+                          <RequireWhatsAppConnection>
+                            <Contacts />
+                          </RequireWhatsAppConnection>
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/planos"
+                      element={
+                        <PrivateRoute>
+                          <Plans />
+                        </PrivateRoute>
+                      }
+                    />
 
-                {/* API Mock Routes - These would normally be handled by a backend */}
-                <Route 
-                  path="/api/whatsapp-status" 
-                  element={<div>{"{ status: \"connected\" }"}</div>}
-                />
+                    {/* 404 route */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
 
-                {/* Catch All */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              <Toaster />
-              <Sonner />
+                  <Toaster />
+                  <Sonner />
+                </TooltipProvider>
+              </StatsProvider>
             </WhatsAppProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
+          </SubscriptionProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 };

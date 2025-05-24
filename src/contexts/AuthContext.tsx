@@ -1,28 +1,20 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AuthState, User } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+import bcrypt from 'bcryptjs';
 import { apiService } from "@/services/apiService";
+import { notify } from '@/services/notification';
 
 interface AuthContextType {
   auth: AuthState;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
-  clearCache: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [auth, setAuth] = useState<AuthState>({
@@ -32,184 +24,201 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const navigate = useNavigate();
 
+  // Validate stored session
+  const validateSession = async (storedUser: User) => {
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id, email, name, instance')
+        .eq('id', storedUser.id)
+        .single();
+
+      if (error || !user) {
+        throw new Error('Sessão inválida');
+      }
+
+      // Verificar se os dados armazenados correspondem aos do banco
+      if (user.email !== storedUser.email || user.name !== storedUser.name) {
+        throw new Error('Dados de sessão inconsistentes');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Session validation error:', error);
+      return false;
+    }
+  };
+
   // Check if user is logged in on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    const initializeAuth = async () => {
       try {
-        const user = JSON.parse(storedUser);
-        setAuth({
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+        const storedUser = localStorage.getItem("user");
+        const currentPath = window.location.pathname;
+        
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          const isValid = await validateSession(user);
+
+          if (isValid) {
+            setAuth({
+              user: {
+                id: user.id,
+                email: user.email || '',
+                name: user.name || '',
+                instance: user.instance || ''
+              },
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            
+            // Redirecionar para o dashboard se estiver em uma rota pública
+            if (currentPath === '/' || currentPath === '/login' || currentPath === '/register') {
+              navigate('/dashboard');
+            }
+          } else {
+            // Se a sessão for inválida, limpar tudo
+            localStorage.removeItem("user");
+            localStorage.removeItem("whatsapp_session");
+            localStorage.removeItem("whatsapp_contacts");
+            localStorage.removeItem("whatsapp_instance");
+            setAuth({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+            navigate('/login');
+          }
+        } else {
+          setAuth({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        }
       } catch (e) {
-        console.error("Failed to parse stored user", e);
+        console.error("Failed to initialize auth:", e);
         localStorage.removeItem("user");
         setAuth({
           user: null,
           isAuthenticated: false,
           isLoading: false,
         });
+        navigate('/login');
       }
-    } else {
-      setAuth({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-    }
-  }, []);
+    };
+
+    initializeAuth();
+  }, [navigate]);
 
   const login = async (email: string, password: string) => {
     try {
-      // Get users from Supabase
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      if (error || !data) {
-        console.error("Login error:", error);
-        toast("Erro ao fazer login", {
-          description: "E-mail não encontrado.",
-        });
-        return;
-      }
+      if (error) throw error;
 
-      // In a real app, you'd verify the password hash here
-      // For demo, we'll just check if the passwords match
-      if (data.password !== password) {
-        toast("Erro ao fazer login", {
-          description: "Senha incorreta.",
-        });
-        return;
-      }
-      
-      // Create user object from Supabase data
-      const user: User = {
-        id: data.id,
-        email: data.email,
-        name: data.name,
-        phone: "" // Keep empty string for compatibility with existing code
-      };
-      
-      localStorage.setItem("user", JSON.stringify(user));
       setAuth({
-        user,
+        user: {
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || '',
+          instance: data.user.user_metadata?.instance || ''
+        },
         isAuthenticated: true,
-        isLoading: false,
+        isLoading: false
       });
-      
-      toast("Login realizado com sucesso!", {
-        description: `Bem-vindo(a) de volta, ${user.name}!`,
+
+      notify.success('Login realizado com sucesso', {
+        description: 'Bem-vindo de volta!'
       });
-      
-      navigate("/dashboard");
+
+      navigate('/dashboard');
     } catch (error) {
-      console.error("Login error:", error);
-      toast("Erro ao fazer login", {
-        description: "Houve um problema ao tentar fazer login.",
+      console.error('Error logging in:', error);
+      notify.error('Erro ao fazer login', {
+        description: 'Verifique suas credenciais e tente novamente.'
       });
+      setAuth(prev => ({ ...prev, error: error as Error }));
     }
   };
 
   const register = async (email: string, password: string, name: string) => {
     try {
-      // Generate a unique ID for the user
-      const id = crypto.randomUUID();
-      const timestamp = new Date().toISOString();
-      
-      // Use a consistent session ID/instance name format
-      const sessionTimestamp = Date.now();
-      const instance = `session-${sessionTimestamp}`;
-      
-      // Prepare data for N8N webhook with the consistent instance
-      const webhookData = {
-        id,
-        created_at: timestamp,
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        instance
-      };
-      
-      console.log("Sending data to N8N webhook:", webhookData);
-      
-      // Use the apiService to call the registerUser function
-      const response = await apiService.registerUser(webhookData);
-      
-      console.log("N8N response:", response);
-      
-      // Create a new user object
-      const newUser: User = {
-        id,
-        email,
-        phone: "", // Keep empty string for compatibility with existing code
-        name,
-      };
-      
-      // Store the instance name in localStorage for later WhatsApp connection
-      localStorage.setItem("whatsapp_instance", instance);
-      
-      // Log the user in
-      localStorage.setItem("user", JSON.stringify(newUser));
+        options: {
+          data: {
+            name
+          }
+        }
+      });
+
+      if (error) throw error;
+
       setAuth({
-        user: newUser,
+        user: {
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || '',
+          instance: data.user.user_metadata?.instance || ''
+        },
         isAuthenticated: true,
+        isLoading: false
+      });
+
+      notify.success('Registro realizado com sucesso', {
+        description: 'Sua conta foi criada! Bem-vindo!'
+      });
+
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error registering:', error);
+      notify.error('Erro ao criar conta', {
+        description: 'Não foi possível criar sua conta. Tente novamente.'
+      });
+      setAuth(prev => ({ ...prev, error: error as Error }));
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      setAuth({
+        user: null,
+        isAuthenticated: false,
         isLoading: false,
       });
-      
-      toast("Registro realizado com sucesso!", {
-        description: `Bem-vindo(a) ao WhatsReMKT, ${name}!`,
+
+      notify.success('Logout realizado com sucesso', {
+        description: 'Até logo!'
       });
-      
-      navigate("/dashboard");
+
+      navigate('/login');
     } catch (error) {
-      console.error("Registration error:", error);
-      toast("Erro ao registrar", {
-        description: "Houve um problema ao tentar criar sua conta. Por favor, tente novamente mais tarde.",
+      console.error('Error logging out:', error);
+      notify.error('Erro ao fazer logout', {
+        description: 'Não foi possível finalizar sua sessão.'
       });
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("user");
-    setAuth({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
-    toast("Logout realizado com sucesso!", {
-      description: "Você foi desconectado(a) da sua conta.",
-    });
-    navigate("/login");
-  };
-
-  // Clear application cache
-  const clearCache = () => {
-    // Clear all localStorage items
-    localStorage.clear();
-    
-    // Reset auth state
-    setAuth({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
-    
-    toast("Cache limpo com sucesso!", {
-      description: "Todos os dados locais foram removidos.",
-    });
-    
-    // Redirect to login
-    navigate("/login");
-  };
-
   return (
-    <AuthContext.Provider value={{ auth, login, register, logout, clearCache }}>
+    <AuthContext.Provider value={{ auth, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}

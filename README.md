@@ -1,73 +1,231 @@
-# Welcome to your Lovable project
+# Contact Remarketing Bot
 
-## Project info
+Uma aplicação web moderna para gerenciamento e automação de mensagens em massa via WhatsApp, construída com React, TypeScript, e Supabase.
 
-**URL**: https://lovable.dev/projects/29f5bd49-3907-443d-b3af-ac9fe8c5433c
+## 🚀 Funcionalidades
 
-## How can I edit this code?
+- Conexão com WhatsApp via QR Code
+- Gerenciamento de contatos
+- Envio de mensagens em massa
+- Importação de contatos via CSV
+- Tracking de estatísticas
+- Interface moderna e responsiva
 
-There are several ways of editing your application.
+## 🏗️ Arquitetura
 
-**Use Lovable**
+### Frontend (React + TypeScript)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/29f5bd49-3907-443d-b3af-ac9fe8c5433c) and start prompting.
+```
+src/
+├── components/        # Componentes reutilizáveis
+├── contexts/         # Contextos React para gerenciamento de estado
+├── hooks/           # Hooks personalizados
+├── integrations/    # Integrações com serviços externos
+├── pages/          # Componentes de página
+├── services/       # Serviços de API e lógica de negócios
+└── types/          # Definições de tipos TypeScript
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+### Backend (Supabase)
 
-**Use your preferred IDE**
+O backend é gerenciado pelo Supabase, oferecendo:
+- Autenticação de usuários
+- Banco de dados PostgreSQL
+- Row Level Security (RLS)
+- Políticas de segurança granulares
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 📊 Estrutura do Banco de Dados
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Tabelas Principais
 
-Follow these steps:
+1. `auth.users` (gerenciada pelo Supabase)
+   - Autenticação e informações básicas do usuário
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+2. `contacts`
+   ```sql
+   - id: UUID (PK)
+   - user_id: UUID (FK -> auth.users)
+   - name: TEXT
+   - phone: TEXT
+   - created_at: TIMESTAMPTZ
+   ```
+   - Armazena os contatos dos usuários
+   - RLS garante que usuários só vejam seus próprios contatos
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+3. `stats` (append-only)
+   ```sql
+   - id: UUID (PK)
+   - user_id: UUID (FK -> auth.users)
+   - total_messages_sent: INTEGER
+   - total_messages_failed: INTEGER
+   - created_at: TIMESTAMPTZ
+   ```
+   - Registro histórico de estatísticas
+   - Cada nova entrada acumula os totais anteriores
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 🔄 Fluxos Principais
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 1. Conexão com WhatsApp
+1. Usuário acessa a página de WhatsApp
+2. Sistema gera QR Code via API Evolution
+3. Usuário escaneia o QR Code
+4. Conexão é estabelecida e mantida
+
+### 2. Gerenciamento de Contatos
+1. Importação via CSV
+   - Upload do arquivo
+   - Validação dos dados
+   - Preview dos contatos
+   - Confirmação e salvamento
+
+2. Gerenciamento manual
+   - Adição individual
+   - Edição
+   - Remoção
+   - Seleção para mensagens
+
+### 3. Envio de Mensagens
+1. Seleção de contatos
+2. Composição da mensagem
+3. Definição do intervalo
+4. Envio em lote com tracking
+5. Atualização de estatísticas
+
+### 4. Tracking de Estatísticas
+1. Cada operação de envio
+   - Busca último registro de stats
+   - Soma novos valores aos totais existentes
+   - Cria novo registro com totais acumulados
+
+## 🔒 Segurança
+
+- Autenticação via Supabase
+- Row Level Security em todas as tabelas
+- Políticas de acesso granulares
+- Validação de dados em múltiplas camadas
+- Sanitização de inputs
+- Rate limiting no envio de mensagens
+
+## 🛠️ Tecnologias
+
+- React 18
+- TypeScript
+- Tailwind CSS
+- Shadcn/ui
+- Supabase
+- Evolution API (WhatsApp)
+- Vite
+
+## 📦 Instalação
+
+1. Clone o repositório
+```bash
+git clone [url-do-repositorio]
+```
+
+2. Instale as dependências
+```bash
+npm install
+```
+
+3. Configure as variáveis de ambiente
+```bash
+cp .env.example .env
+```
+
+4. Execute as migrações do Supabase
+```bash
+npx supabase db push
+```
+
+5. Inicie o servidor de desenvolvimento
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## 🤝 Contribuição
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. Fork o projeto
+2. Crie sua branch de feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
-**Use GitHub Codespaces**
+## 📝 Licença
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-## What technologies are used for this project?
+## Fluxo de Pagamento e Assinaturas
 
-This project is built with:
+### Configuração do Stripe
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Configure as variáveis de ambiente:
+```env
+VITE_STRIPE_PUBLIC_KEY=pk_test_your_key
+VITE_STRIPE_SECRET_KEY=sk_test_your_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+```
 
-## How can I deploy this project?
+2. Configure o webhook no painel do Stripe:
+   - URL: `https://seu-dominio.com/api/webhook`
+   - Eventos necessários:
+     - `checkout.session.completed`
+     - `customer.subscription.updated`
+     - `invoice.payment_succeeded`
 
-Simply open [Lovable](https://lovable.dev/projects/29f5bd49-3907-443d-b3af-ac9fe8c5433c) and click on Share -> Publish.
+### Fluxo de Assinatura
 
-## Can I connect a custom domain to my Lovable project?
+1. **Início do Checkout**
+   - Usuário seleciona um plano (Pro ou Business)
+   - Sistema cria uma sessão de checkout do Stripe com:
+     - Preço do plano selecionado
+     - Metadados do usuário e plano
+     - URLs de sucesso/cancelamento
 
-Yes, you can!
+2. **Processo de Pagamento**
+   - Usuário é redirecionado para o checkout do Stripe
+   - Insere informações de pagamento
+   - Stripe processa o pagamento
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+3. **Webhook e Banco de Dados**
+   - Após pagamento bem-sucedido:
+     - Stripe envia evento `checkout.session.completed`
+     - Sistema cria registro na tabela `subscriptions`
+     - Sistema cria registro na tabela `payment_history`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+4. **Atualização de Status**
+   - Para pagamentos recorrentes:
+     - Stripe envia evento `invoice.payment_succeeded`
+     - Sistema registra novo pagamento em `payment_history`
+   - Para mudanças na assinatura:
+     - Stripe envia evento `customer.subscription.updated`
+     - Sistema atualiza status em `subscriptions`
+
+5. **Redirecionamento**
+   - Usuário é redirecionado para `/dashboard?payment=success`
+   - Interface atualiza para mostrar novo status da assinatura
+
+### Tabelas do Banco de Dados
+
+#### subscriptions
+- `id`: UUID (PK)
+- `user_id`: UUID (FK)
+- `plan_id`: UUID (FK)
+- `status`: string (active, canceled, etc)
+- `current_period_start`: timestamp
+- `current_period_end`: timestamp
+- `payment_provider`: string
+- `payment_provider_subscription_id`: string
+
+#### payment_history
+- `id`: UUID (PK)
+- `subscription_id`: string (FK)
+- `amount`: decimal
+- `status`: string
+- `provider_payment_id`: string
+- `created_at`: timestamp
+
+### Preços dos Planos
+
+- Pro: `price_1RSOYJRHP1HTmtJCfC1AzwoX`
+- Business: `price_1RSOW3RHP1HTmtJCodOnPpo4`
