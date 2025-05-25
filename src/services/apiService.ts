@@ -108,6 +108,16 @@ export const apiService = {
     }
   },
 
+  // Delete Evolution API Instance
+  async deleteInstance(instanceName: string): Promise<void> {
+    try {
+      await api.delete(`/instance/delete/${instanceName}`);
+    } catch (error) {
+      console.error("Error deleting instance:", error);
+      throw error;
+    }
+  },
+
   // Register new user
   async registerUser(userData: any): Promise<any> {
     const response = await api.post("/users/register", userData);

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Plan, Subscription, PaymentHistory, SubscriptionContextType } from '@/types/subscription';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client-browser';
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
 import { loadStripe } from '@stripe/stripe-js';
@@ -18,6 +18,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Cleanup effect
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      setCurrentPlan(null);
+      setSubscription(null);
+      setPaymentHistory([]);
+    }
+  }, [auth.isAuthenticated]);
 
   // Fetch current subscription and plan
   useEffect(() => {
@@ -96,38 +105,30 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!auth.user) return;
 
     try {
-      const priceId = planId === 'pro' ? STRIPE_CONFIG.PRICES.PRO : STRIPE_CONFIG.PRICES.BUSINESS;
-      
-      const response = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          'line_items[0][price]': priceId,
-          'line_items[0][quantity]': '1',
-          'mode': 'subscription',
-          'success_url': STRIPE_CONFIG.SUCCESS_URL,
-          'cancel_url': STRIPE_CONFIG.CANCEL_URL,
-          'metadata[userId]': auth.user.id,
-          'metadata[planId]': planId,
-          'customer_email': auth.user.email || ''
-        })
+        body: JSON.stringify({
+          planId,
+          userId: auth.user.id,
+          email: auth.user.email
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const session = await response.json();
+      const { sessionId } = await response.json();
       const stripe = await stripePromise;
       
       if (!stripe) {
         throw new Error('Stripe not initialized');
       }
 
-      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+      const { error } = await stripe.redirectToCheckout({ sessionId });
       
       if (error) {
         throw error;
@@ -145,11 +146,12 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const cancelSubscription = async () => {
     if (!subscription) return;
 
-    const loadingToast = notify.loading('Cancelando assinatura...', {
-      duration: 0 // Infinito até ser atualizado
-    });
-
+    let loadingToastId: string | undefined;
     try {
+      loadingToastId = notify.loading('Cancelando assinatura...', {
+        duration: 0 // Infinito até ser atualizado
+      });
+
       const response = await fetch('/api/cancel-subscription', {
         method: 'POST',
         headers: {
@@ -175,16 +177,19 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         cancel_at_period_end: true,
       });
 
-      notify.dismiss(loadingToast);
       notify.success('Assinatura cancelada com sucesso', {
         description: 'Você terá acesso até o final do período atual.'
       });
     } catch (error) {
       console.error('Error canceling subscription:', error);
-      notify.dismiss(loadingToast);
       notify.error('Erro ao cancelar assinatura', {
         description: 'Por favor, tente novamente mais tarde.'
       });
+      throw error; // Re-throw para o componente tratar se necessário
+    } finally {
+      if (loadingToastId) {
+        notify.dismiss(loadingToastId);
+      }
     }
   };
 

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Stats, StatsContextType } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client-browser';
 import { useAuth } from './AuthContext';
 import { notify } from '@/services/notification';
 
@@ -10,6 +10,14 @@ export const StatsProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { auth } = useAuth();
+
+  // Cleanup effect
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      setStats(null);
+      setIsLoading(false);
+    }
+  }, [auth.isAuthenticated]);
 
   const fetchLatestStats = async () => {
     try {

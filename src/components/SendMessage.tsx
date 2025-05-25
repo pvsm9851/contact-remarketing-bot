@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Send, Loader2, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
+import MessageIntervalConfig from "./MessageIntervalConfig";
 
 export function SendMessage() {
   const { contacts, selectedContacts, sendBulkMessages, clearSelectedContacts } = useWhatsApp();
@@ -121,20 +122,11 @@ export function SendMessage() {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="interval">Intervalo entre mensagens (segundos)</Label>
-          <Input
-            id="interval"
-            type="number"
-            min={10}
-            value={intervalSeconds}
-            onChange={(e) => setIntervalSeconds(Number(e.target.value))}
-            className="bg-gray-900 border-gray-700 text-gray-100"
-          />
-          <p className="text-sm text-gray-400">
-            Mínimo de 10 segundos entre cada mensagem
-          </p>
-        </div>
+        <MessageIntervalConfig
+          intervalSeconds={intervalSeconds}
+          setIntervalSeconds={setIntervalSeconds}
+          selectedContactsCount={selectedContacts.length}
+        />
       </div>
 
       <div className="space-y-4">

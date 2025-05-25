@@ -5,22 +5,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStats } from "@/contexts/StatsContext";
-import { MessageSquare, Users, Zap, BarChart3, Settings, Bell } from "lucide-react";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { MessageSquare, Users, Zap, BarChart3, Settings, Bell, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client-browser";
+import { usePaymentStatus } from '@/hooks/usePaymentStatus';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { auth } = useAuth();
-  const { stats, isLoading } = useStats();
+  const { stats, isLoading: statsLoading } = useStats();
+  const { currentPlan, subscription, isLoading: subscriptionLoading } = useSubscription();
+  const paymentStatus = usePaymentStatus();
   const [totalContacts, setTotalContacts] = useState(0);
   const [loadingContacts, setLoadingContacts] = useState(true);
-
-  // Limites do plano (você pode ajustar conforme necessário)
-  const limits = {
-    messages: 1000,
-    contacts: 500
-  };
 
   // Buscar contagem de contatos
   useEffect(() => {
@@ -58,14 +56,14 @@ const Dashboard = () => {
     return Math.round((stats.total_messages_sent / total) * 100);
   };
 
-  if (isLoading || loadingContacts) {
+  if (statsLoading || loadingContacts || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-gray-900 text-gray-100">
         <CustomHeader />
         <main className="container mx-auto p-6">
           <div className="flex items-center justify-center h-[60vh]">
             <div className="animate-pulse text-center">
-              <p className="text-gray-400">Carregando estatísticas...</p>
+              <p className="text-gray-400">Carregando dados...</p>
             </div>
           </div>
         </main>
@@ -73,11 +71,16 @@ const Dashboard = () => {
     );
   }
 
+  const limits = currentPlan?.limits || {
+    contacts: 100,
+    messages_per_month: 500
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col text-gray-100">
       <CustomHeader />
       
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="container mx-auto p-6">
         {/* Cabeçalho com Boas-vindas */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
@@ -88,6 +91,61 @@ const Dashboard = () => {
           </p>
         </div>
 
+        {/* Status do Pagamento */}
+        {paymentStatus.status && (
+          <Card className={`mb-8 ${
+            paymentStatus.status === 'success' ? 'bg-green-500/10 border-green-500/50' :
+            paymentStatus.status === 'failed' ? 'bg-red-500/10 border-red-500/50' :
+            'bg-yellow-500/10 border-yellow-500/50'
+          }`}>
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                {paymentStatus.status === 'success' && (
+                  <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+                )}
+                {paymentStatus.status === 'failed' && (
+                  <XCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                )}
+                {paymentStatus.status === 'pending' && (
+                  <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                )}
+                <div>
+                  <h3 className={`font-semibold ${
+                    paymentStatus.status === 'success' ? 'text-green-500' :
+                    paymentStatus.status === 'failed' ? 'text-red-500' :
+                    'text-yellow-500'
+                  }`}>
+                    {paymentStatus.status === 'success' ? 'Pagamento Confirmado' :
+                     paymentStatus.status === 'failed' ? 'Erro no Pagamento' :
+                     'Processando Pagamento'}
+                  </h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {paymentStatus.message}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Status da Assinatura */}
+        {subscription?.cancel_at_period_end && (
+          <Card className="mb-8 bg-yellow-500/10 border-yellow-500/50">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-yellow-500">Assinatura Cancelada</h3>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Sua assinatura será cancelada ao final do período atual. 
+                    Você ainda tem acesso aos recursos premium até {new Date(subscription.current_period_end).toLocaleDateString()}.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Status do WhatsApp */}
         <div className="grid gap-6 mb-8">
           <Card className="bg-gray-800 border-gray-700">
@@ -95,7 +153,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold">Status do Plano</h3>
-                  <p className="text-sm text-gray-400">Plano Profissional</p>
+                  <p className="text-sm text-gray-400">{currentPlan?.name || 'Free'}</p>
                 </div>
                 <Button
                   variant="outline"
@@ -112,10 +170,10 @@ const Dashboard = () => {
                   <p className="text-sm text-gray-400 mb-2">Mensagens Enviadas</p>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-300">{stats?.total_messages_sent || 0} / {limits.messages}</span>
-                      <span className="text-gray-400">{getPercentage(stats?.total_messages_sent || 0, limits.messages)}%</span>
+                      <span className="text-gray-300">{stats?.total_messages_sent || 0} / {limits.messages_per_month}</span>
+                      <span className="text-gray-400">{getPercentage(stats?.total_messages_sent || 0, limits.messages_per_month)}%</span>
                     </div>
-                    <Progress value={getPercentage(stats?.total_messages_sent || 0, limits.messages)} className="bg-gray-700" />
+                    <Progress value={getPercentage(stats?.total_messages_sent || 0, limits.messages_per_month)} className="bg-gray-700" />
                   </div>
                 </div>
 
@@ -181,16 +239,16 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700 hover:border-blue-500/50 transition-colors cursor-pointer" onClick={() => navigate("/mensagens")}>
+          <Card className="bg-gray-800 border-gray-700 hover:border-blue-500/50 transition-colors cursor-pointer" onClick={() => navigate("/planos")}>
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="p-2 bg-blue-600/10 rounded-lg">
-                  <MessageSquare className="h-6 w-6 text-blue-500" />
+                  <Settings className="h-6 w-6 text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-1">Mensagens</h3>
+                  <h3 className="font-semibold mb-1">Planos</h3>
                   <p className="text-sm text-gray-400">
-                    Histórico e status de mensagens
+                    Gerencie sua assinatura
                   </p>
                 </div>
               </div>
@@ -198,7 +256,7 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Atividade Recente e Notificações */}
+        {/* Cards de Estatísticas */}
         <div className="grid md:grid-cols-2 gap-6">
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-6">
@@ -240,7 +298,7 @@ const Dashboard = () => {
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <p className="text-gray-300">WhatsApp conectado e funcionando normalmente</p>
                 </div>
-                {(stats?.total_messages_sent || 0) > (limits.messages * 0.8) && (
+                {(stats?.total_messages_sent || 0) > (limits.messages_per_month * 0.8) && (
                   <div className="flex items-center gap-4 text-sm">
                     <div className="w-2 h-2 rounded-full bg-yellow-500" />
                     <p className="text-gray-300">80% do limite de mensagens atingido</p>

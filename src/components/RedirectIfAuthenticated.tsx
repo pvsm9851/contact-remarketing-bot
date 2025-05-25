@@ -1,6 +1,6 @@
-
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 interface RedirectIfAuthenticatedProps {
   children: React.ReactNode;
@@ -8,6 +8,13 @@ interface RedirectIfAuthenticatedProps {
 
 const RedirectIfAuthenticated: React.FC<RedirectIfAuthenticatedProps> = ({ children }) => {
   const { auth } = useAuth();
+
+  useEffect(() => {
+    // Se estiver autenticado, força o redirecionamento
+    if (auth.isAuthenticated) {
+      window.location.href = '/dashboard';
+    }
+  }, [auth.isAuthenticated]);
 
   if (auth.isLoading) {
     return (
@@ -19,9 +26,15 @@ const RedirectIfAuthenticated: React.FC<RedirectIfAuthenticatedProps> = ({ child
     );
   }
 
+  // Se estiver autenticado, mostra loading enquanto redireciona
   if (auth.isAuthenticated) {
-    // Redirect to dashboard if already authenticated
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="animate-pulse text-center">
+          <p className="text-gray-500">Redirecionando...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;

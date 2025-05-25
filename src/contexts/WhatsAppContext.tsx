@@ -6,7 +6,7 @@ import { apiService } from "@/services/apiService";
 import { contactsService } from "@/services/contactsService";
 import type { Database } from "@/integrations/supabase/types";
 import { notify } from '@/services/notification';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client-browser';
 
 type ContactInsert = Database["public"]["Tables"]["contacts"]["Insert"];
 
@@ -45,6 +45,21 @@ export function WhatsAppProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingContacts, setLoadingContacts] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Cleanup effect - deve ser o primeiro useEffect
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      console.log('Limpando estado do WhatsApp devido a desautenticação');
+      setSession(null);
+      setContacts([]);
+      setImportedContacts([]);
+      setSelectedContacts([]);
+      setError(null);
+      localStorage.removeItem("whatsapp_session");
+      localStorage.removeItem("whatsapp_contacts");
+      localStorage.removeItem("whatsapp_instance");
+    }
+  }, [auth.isAuthenticated]);
 
   // Load session from localStorage on mount
   useEffect(() => {
@@ -194,36 +209,61 @@ export function WhatsAppProvider({ children }: { children: React.ReactNode }) {
   // Parse contacts from file
   const parseContactsFile = async (file: File): Promise<boolean> => {
     if (!auth.user?.id) {
-      toast.error("Usuário não autenticado", {
-        description: "Faça login para importar contatos."
+      notify.error('Usuário não autenticado', {
+        description: 'Faça login para importar contatos.'
       });
       return false;
     }
 
     setLoadingContacts(true);
+
     try {
-      const parsedContacts = await contactsService.parseCSV(file);
-      const contacts = parsedContacts.map(contact => ({
-        ...contact,
-        user_id: auth.user.id
-      }));
+      const text = await file.text();
+      const rows = text.split('\n');
+      
+      // Remove empty rows and header
+      const validRows = rows
+        .filter(row => row.trim())
+        .slice(1);
 
-      const { error } = await supabase
-        .from('contacts')
-        .insert(contacts);
+      if (validRows.length === 0) {
+        throw new Error('Arquivo vazio ou sem contatos válidos');
+      }
 
-      if (error) throw error;
+      const contacts: ContactInsert[] = validRows.map(row => {
+        const [name, phone] = row.split(',').map(field => field.trim());
+        
+        if (!name || !phone) {
+          throw new Error('Formato inválido: cada linha deve ter nome e telefone');
+        }
 
-      notify.success('Contatos importados', {
-        description: `${contacts.length} contatos foram importados com sucesso.`
+        // Remove todos os caracteres não numéricos
+        const cleanPhone = phone.replace(/\D/g, '');
+        
+        // Valida o formato do número
+        if (!/^55\d{10,11}$/.test(cleanPhone)) {
+          throw new Error(`Número de telefone inválido: ${phone}. Use o formato: 5511999999999`);
+        }
+
+        return {
+          user_id: auth.user!.id,
+          name,
+          phone: cleanPhone,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
       });
 
       setImportedContacts(contacts);
+      notify.success('Contatos carregados', {
+        description: `${contacts.length} contatos foram carregados. Clique em "Salvar" para importá-los.`
+      });
+
       return true;
     } catch (error) {
       console.error('Error parsing contacts:', error);
       notify.error('Erro ao importar contatos', {
-        description: 'Verifique se o arquivo está no formato correto.'
+        description: error instanceof Error ? error.message : 'Verifique se o arquivo está no formato correto.'
       });
       return false;
     } finally {

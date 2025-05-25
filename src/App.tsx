@@ -14,7 +14,6 @@ import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 // Components
 import RequireAuth from "@/components/RequireAuth";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
-import RequireWhatsAppConnection from "@/components/RequireWhatsAppConnection";
 import PrivateRoute from "@/components/PrivateRoute";
 
 // Pages
@@ -26,6 +25,9 @@ import WhatsApp from "./pages/WhatsApp";
 import Contacts from "./pages/Contacts";
 import Plans from "./pages/Plans";
 import NotFound from "./pages/NotFound";
+import CheckEmail from "@/pages/CheckEmail";
+import PaymentSuccess from "@/pages/payment/success";
+import PaymentCancel from "@/pages/payment/cancel";
 
 const queryClient = new QueryClient();
 
@@ -34,8 +36,8 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <SubscriptionProvider>
-            <WhatsAppProvider>
+          <WhatsAppProvider>
+            <SubscriptionProvider>
               <StatsProvider>
                 <TooltipProvider>
                   <Routes>
@@ -54,6 +56,14 @@ const App: React.FC = () => {
                       element={
                         <RedirectIfAuthenticated>
                           <Register />
+                        </RedirectIfAuthenticated>
+                      }
+                    />
+                    <Route
+                      path="/register/check-email"
+                      element={
+                        <RedirectIfAuthenticated>
+                          <CheckEmail />
                         </RedirectIfAuthenticated>
                       }
                     />
@@ -79,9 +89,7 @@ const App: React.FC = () => {
                       path="/contatos"
                       element={
                         <PrivateRoute>
-                          <RequireWhatsAppConnection>
-                            <Contacts />
-                          </RequireWhatsAppConnection>
+                          <Contacts />
                         </PrivateRoute>
                       }
                     />
@@ -94,6 +102,24 @@ const App: React.FC = () => {
                       }
                     />
 
+                    {/* Payment result routes */}
+                    <Route
+                      path="/payment/success"
+                      element={
+                        <PrivateRoute>
+                          <PaymentSuccess />
+                        </PrivateRoute>
+                      }
+                    />
+                    <Route
+                      path="/payment/cancel"
+                      element={
+                        <PrivateRoute>
+                          <PaymentCancel />
+                        </PrivateRoute>
+                      }
+                    />
+
                     {/* 404 route */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
@@ -102,8 +128,8 @@ const App: React.FC = () => {
                   <Sonner />
                 </TooltipProvider>
               </StatsProvider>
-            </WhatsAppProvider>
-          </SubscriptionProvider>
+            </SubscriptionProvider>
+          </WhatsAppProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
